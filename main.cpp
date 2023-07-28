@@ -51,7 +51,7 @@ vector<vector<double> > reader(ifstream &thefile) {
     return transpose;
 }
 
-void graph(vector<vector<double> > input , string output_path) {
+void graph(vector<vector<double> > input , string output_path, string outputname) {
 
     int no_of_datasets = int(input.size());
     vector<double> peak_voltages(no_of_datasets);
@@ -93,7 +93,7 @@ void graph(vector<vector<double> > input , string output_path) {
         fitFcn->SetRange(0,x_max);
         graph->Fit("fitFcn","wRQ");
 
-        //Calculate Rise/Fall Time:
+        //Calculate Rise-Fall Time:
         double min_value_fit = fitFcn->GetMinimum();
         double min_time_fit = fitFcn->GetParameter(1);
         double r1 = fitFcn->GetX(min_value_fit*0.2,0,min_time_fit);
@@ -115,7 +115,7 @@ void graph(vector<vector<double> > input , string output_path) {
         graph->Draw("A*");
         gStyle->SetOptFit(1);
 
-        //Save Graph as Root File:
+        //Save Graph as Root and PDF File:
         gErrorIgnoreLevel = kWarning;
         string root_path = output_path + "/root";
         string pdf_path = output_path + "/pdf";
@@ -129,26 +129,32 @@ void graph(vector<vector<double> > input , string output_path) {
         //Calculate Integral of the Fall:
         double epsrel = 1.0e-20;
         integrals.push_back(-1 * fitFcn->Integral(l1, x_max, epsrel));
+        cout << j+1 << "/" << no_of_datasets << "\r";
+        cout.flush();
     }
-    //Print Results
 
+    //Print Results
     string output_txt = output_path + "_result.txt";
     ofstream Out_txt(output_txt.c_str());
 
-    Out_txt << "  Graph    Fall-Integral      Peaks (V)      Time (s)    RiseTime(s)    FallTime(s)";    
+    Out_txt << "  Graph,Fall-Integral,Peaks(V),Time(s),RiseTime(s),FallTime(s)";    
     for(int i = 0; i < no_of_datasets; i++){
-    Out_txt << "\n" << setw(4) << i+1 << "       " << setw(12) << integrals[i] << "       " << setw(9) << peak_voltages[i] 
-    << "       "<< setw(6) << peak_time[i] << "       " << setw(12) << risetime[i] << "       " << setw(12)<< falltime[i];
+    Out_txt << "\n" << integrals[i] << "," << peak_voltages[i] << "," << peak_time[i] << "," << risetime[i] << "," << falltime[i];
     }
-
     Out_txt.close();
 
-    //Creat Histograms
-    TH1* h_fall = new TH1I("h_fall", "Fall Time (s)", no_of_datasets, 0.0, 4.0);
-    TH1* h_rise = new TH1I("h_rise", "Rise Time (s)", no_of_datasets, 0.0, 4.0);
-    TH1* h_integral = new TH1I("h_integral", "Fall-Integral", no_of_datasets, 0.0, 4.0);
-    TH1* h_peak_volt = new TH1I("h_peak", "Peak Voltages (V)", no_of_datasets, -10.0, 0.0);
-    TH1* h_peak_time = new TH1I("h_time", "Peak Times(s)", no_of_datasets, 0.0, 4.0);
+    //Create Histograms
+    string h_fall_title = outputname + "- Fall Time";
+    string h_rise_title = outputname + "- Rise Time";
+    string h_integral_title = outputname + " - Fall Integral";
+    string h_peak_volt_title = outputname + " - Peak Voltage";
+    string h_peak_time_title = outputname + " - Peak Time";
+
+    TH1* h_fall = new TH1D("h_fall", h_fall_title.c_str(), no_of_datasets, *min_element(falltime.begin(), falltime.end()), *max_element(falltime.begin(), falltime.end()));
+    TH1* h_rise = new TH1D("h_rise", h_rise_title.c_str(), no_of_datasets, *min_element(risetime.begin(), risetime.end()), *max_element(risetime.begin(), risetime.end()));
+    TH1* h_integral = new TH1D("h_integral", h_integral_title.c_str(), no_of_datasets, *min_element(integrals.begin(), integrals.end()), *max_element(integrals.begin(), integrals.end()));
+    TH1* h_peak_volt = new TH1D("h_peak_volt", h_peak_volt_title.c_str(), no_of_datasets, *min_element(peak_voltages.begin(), peak_voltages.end()), *max_element(peak_voltages.begin(), peak_voltages.end()));
+    TH1* h_peak_time = new TH1D("h_peak_time", h_peak_time_title.c_str(), no_of_datasets, *min_element(peak_time.begin(), peak_time.end()), *max_element(peak_time.begin(), peak_time.end()));
 
     for (int i=0; i<no_of_datasets; i++) h_fall->Fill(falltime[i]);
     for (int i=0; i<no_of_datasets; i++) h_rise->Fill(risetime[i]);
@@ -242,7 +248,7 @@ int main(){
         outputname = outputname.substr(index + 1);
         string outputpath = string(fs::current_path()) + "/outputs/" + outputname;
         fs::create_directory(outputpath);
-        graph(output, outputpath);
+        graph(output, outputpath, outputname);
         cout << GREEN <<  "Output is saved to the directory: " << RESET << outputpath << endl;
     }
     
