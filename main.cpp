@@ -134,10 +134,10 @@ void graph(vector<vector<double> > input , string output_path, string outputname
     }
 
     //Print Results
-    string output_txt = output_path + "_result.txt";
+    string output_txt = output_path + "result.txt";
     ofstream Out_txt(output_txt.c_str());
 
-    Out_txt << "  Graph,Fall-Integral,Peaks(V),Time(s),RiseTime(s),FallTime(s)";    
+    Out_txt << "Graph,Fall-Integral,Peaks(V),Time(s),RiseTime(s),FallTime(s)";    
     for(int i = 0; i < no_of_datasets; i++){
     Out_txt << "\n" << integrals[i] << "," << peak_voltages[i] << "," << peak_time[i] << "," << risetime[i] << "," << falltime[i];
     }
@@ -150,11 +150,11 @@ void graph(vector<vector<double> > input , string output_path, string outputname
     string h_peak_volt_title = outputname + " - Peak Voltage";
     string h_peak_time_title = outputname + " - Peak Time";
 
-    TH1* h_fall = new TH1D("h_fall", h_fall_title.c_str(), no_of_datasets, *min_element(falltime.begin(), falltime.end()), *max_element(falltime.begin(), falltime.end()));
-    TH1* h_rise = new TH1D("h_rise", h_rise_title.c_str(), no_of_datasets, *min_element(risetime.begin(), risetime.end()), *max_element(risetime.begin(), risetime.end()));
-    TH1* h_integral = new TH1D("h_integral", h_integral_title.c_str(), no_of_datasets, *min_element(integrals.begin(), integrals.end()), *max_element(integrals.begin(), integrals.end()));
-    TH1* h_peak_volt = new TH1D("h_peak_volt", h_peak_volt_title.c_str(), no_of_datasets, *min_element(peak_voltages.begin(), peak_voltages.end()), *max_element(peak_voltages.begin(), peak_voltages.end()));
-    TH1* h_peak_time = new TH1D("h_peak_time", h_peak_time_title.c_str(), no_of_datasets, *min_element(peak_time.begin(), peak_time.end()), *max_element(peak_time.begin(), peak_time.end()));
+    TH1* h_fall = new TH1D("h_fall", h_fall_title.c_str(), 10, *min_element(falltime.begin(), falltime.end()), *max_element(falltime.begin(), falltime.end()));
+    TH1* h_rise = new TH1D("h_rise", h_rise_title.c_str(), 10, *min_element(risetime.begin(), risetime.end()), *max_element(risetime.begin(), risetime.end()));
+    TH1* h_integral = new TH1D("h_integral", h_integral_title.c_str(), 10, *min_element(integrals.begin(), integrals.end()), *max_element(integrals.begin(), integrals.end()));
+    TH1* h_peak_volt = new TH1D("h_peak_volt", h_peak_volt_title.c_str(), 10, *min_element(peak_voltages.begin(), peak_voltages.end()), *max_element(peak_voltages.begin(), peak_voltages.end()));
+    TH1* h_peak_time = new TH1D("h_peak_time", h_peak_time_title.c_str(), 10, *min_element(peak_time.begin(), peak_time.end()), *max_element(peak_time.begin(), peak_time.end()));
 
     for (int i=0; i<no_of_datasets; i++) h_fall->Fill(falltime[i]);
     for (int i=0; i<no_of_datasets; i++) h_rise->Fill(risetime[i]);
@@ -192,7 +192,7 @@ void graph(vector<vector<double> > input , string output_path, string outputname
 int main(){
     ifstream *datafile;
     vector<vector<double>> output;
-    string path_of_output_directory = string(fs::current_path()) + "/outputs/";
+    string path_of_output_directory = string(fs::current_path()) + "/outputs_old/";
     fs::create_directory(path_of_output_directory);
 
     // Check if directory creation was successful
@@ -219,6 +219,7 @@ int main(){
 
     cout << YELLOW << "Enter the path of the .txt file:" << RESET << endl;
 
+//For only one data file
     string filename;
     while (true) {
         cout << YELLOW "> " RESET << flush;
@@ -230,6 +231,14 @@ int main(){
             cout << RED "ERROR: Please enter a .txt file." RESET << endl;
         }
     }
+
+/*
+    string found_name = string(fs::current_path()) + "/FoundFiles.txt";
+    std::ifstream file(found_name);
+    std::string filename; 
+
+    while (std::getline(file, filename)){ //This method leads to memory allocation problems
+*/
 
     datafile = open_data_file(filename);
     if (datafile != nullptr) {
@@ -244,16 +253,21 @@ int main(){
 
         output = reader(*datafile);
         string outputname = filename.substr(0, filename.length() - 4);
+        unsigned first = filename.find("data/");
+        unsigned last = filename.find_last_of("/");
+        string file = filename.substr (first,last-first);
         int index = outputname.find_last_of("/");
         outputname = outputname.substr(index + 1);
-        string outputpath = string(fs::current_path()) + "/outputs/" + outputname;
-        fs::create_directory(outputpath);
+        string outputpath = string(fs::current_path()) + "/outputs_old/" + file + "/" +  outputname + "/";
+        fs::create_directories(outputpath);
         graph(output, outputpath, outputname);
         cout << GREEN <<  "Output is saved to the directory: " << RESET << outputpath << endl;
     }
+
+    
     
     else{
-        cout << RED "ERROR: Could not open the file." RESET << endl;   
-    }
+        cout << RED "ERROR: Could not open the file." RESET << endl;
+    } 
     return 0;
 }
