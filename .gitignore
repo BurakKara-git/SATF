@@ -1,3 +1,7 @@
 /data
 /outputs
+/commands
+/outputs_old
 satforce
+FoundFiles.txt
+result.root
