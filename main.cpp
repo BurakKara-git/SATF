@@ -4,6 +4,7 @@
 using namespace std;
 namespace fs = std::filesystem;
 vector<string> results;
+vector<string> errors;
 
 vector<string> splitter(string name)
 {
@@ -108,19 +109,63 @@ void graph_maker(vector<vector<double>> input, string output_path, string output
         fitFcn->SetRange(0, x_max);
         graph->Fit("fitFcn", "wRQ");
 
-        // Calculate Rise-Fall Time:
-        double min_value_fit = fitFcn->GetMinimum();
-        double min_time_fit = fitFcn->GetParameter(1);
-        double r1 = fitFcn->GetX(min_value_fit * 0.2, 0, min_time_fit);
-        double r2 = fitFcn->GetX(min_value_fit * 0.8, 0, min_time_fit);
-        double l1 = fitFcn->GetX(min_value_fit * 0.8, min_time_fit, x_max);
-        double l2 = fitFcn->GetX(min_value_fit * 0.2, min_time_fit, x_max);
-        risetime.push_back(r2 - r1);
-        falltime.push_back(l2 - l1);
+        double chi2 = fitFcn->GetChisquare();
+        try // Omit Corrupted Data Segments
+        {
+            if (chi2 < 3)
+            {
+                // Calculate Rise-Fall Time:
+                double min_value_fit = fitFcn->GetMinimum();
+                double min_time_fit = fitFcn->GetParameter(1);
+                double r1 = fitFcn->GetX(min_value_fit * 0.2, 0, min_time_fit);
+                double r2 = fitFcn->GetX(min_value_fit * 0.8, 0, min_time_fit);
+                double l1 = fitFcn->GetX(min_value_fit * 0.8, min_time_fit, x_max);
+                double l2 = fitFcn->GetX(min_value_fit * 0.2, min_time_fit, x_max);
+                risetime.push_back(r2 - r1);
+                falltime.push_back(l2 - l1);
 
-        // Calculate Integral of the Fall:
-        double epsrel = 1.0e-20;
-        integrals.push_back(-1 * fitFcn->Integral(l1, x_max, epsrel));
+                // Calculate Integral of the Fall:
+                double epsrel = 1.0e-20;
+                integrals.push_back(-1 * fitFcn->Integral(l1, x_max, epsrel));
+            }
+
+            else // Print Corrupted Data to errors File
+            {
+                // Graph Design
+                TCanvas *c1 = new TCanvas("c1", "c1", 200, 10, 600, 400);
+                c1->SetGrid();
+                c1->Draw();
+                graph->SetTitle(Form("Voltage vs. Time  (No. %d) ", j + 1));
+                graph->GetXaxis()->SetTitle("Time (s)");
+                graph->GetYaxis()->SetTitle("Voltage (V)");
+                graph->SetMarkerStyle(8);
+                graph->SetMarkerColor(kBlue);
+                graph->SetMarkerSize(0.7);
+                graph->SetLineColor(kBlue);
+                graph->SetLineWidth(3);
+                graph->Draw("A*");
+                gStyle->SetOptFit(1);
+
+                // Save Graph as Root and PDF File:
+                gErrorIgnoreLevel = kWarning;
+                string root_path = output_path + "/errors/root";
+                string pdf_path = output_path + "/errors/pdf";
+                fs::create_directories(root_path.c_str());
+                fs::create_directories(pdf_path.c_str());
+                string output_root = root_path + "/graph_" + to_string(j + 1) + ".root";
+                string output_pdf = pdf_path + "/graph_" + to_string(j + 1) + ".pdf";
+                c1->SaveAs(output_pdf.c_str());
+                c1->SaveAs(output_root.c_str());
+                risetime.push_back(NAN);
+                delete c1;
+                throw(j);
+            }
+        }
+        catch (int segment)
+        {
+            cout << "High Chi2 = " << chi2 << " on File: " << output_path << "Segment: " << segment << endl;
+        }
+
         cout << j + 1 << "/" << no_of_datasets << "\r";
         cout.flush();
         delete fitFcn;
@@ -147,17 +192,25 @@ void graph_maker(vector<vector<double>> input, string output_path, string output
     TH1 *h_peak_time = new TH1D(peak_time_histname.c_str(), h_peak_time_title.c_str(), 10, *min_element(peak_time.begin(), peak_time.end()), *max_element(peak_time.begin(), peak_time.end()));
 
     for (int i = 0; i < no_of_datasets; i++)
-        h_fall->Fill(falltime[i]);
-    for (int i = 0; i < no_of_datasets; i++)
-        h_rise->Fill(risetime[i]);
-    for (int i = 0; i < no_of_datasets; i++)
-        h_integral->Fill(integrals[i]);
-    for (int i = 0; i < no_of_datasets; i++)
-        h_peak_volt->Fill(peak_voltages[i]);
-    for (int i = 0; i < no_of_datasets; i++)
-        h_peak_time->Fill(peak_time[i]);
+    {
+        if (isnan(risetime[i])) // Push Corrupted Segments
+        {
+            string error_file = output_path + "," + to_string(i + 1);
+            errors.push_back(error_file);
+        }
+
+        else // Fill Histograms
+        {
+            h_fall->Fill(falltime[i]);
+            h_rise->Fill(risetime[i]);
+            h_integral->Fill(integrals[i]);
+            h_peak_volt->Fill(peak_voltages[i]);
+            h_peak_time->Fill(peak_time[i]);
+        }
+    }
 
     // Print Results as CSV Format
+    hist_result.push_back(h_fall->GetEntries());
     hist_result.push_back(h_fall->GetMean());
     hist_result.push_back(h_rise->GetMean());
     hist_result.push_back(h_integral->GetMean());
@@ -306,7 +359,7 @@ int main()
             cout << "\n" GREEN "Successfully opened the file." RESET << endl;
             cout << YELLOW << "File name: " << RESET << filename << endl;
 
-            // Skipping the first 24 lines of the oscilloscope data file since it is not what we need
+            // Skip 24 Lines, not containing data
             for (int i = 0; i < 24; ++i)
             {
                 string line;
@@ -323,7 +376,9 @@ int main()
             outputname = outputname.substr(index + 1);
             string outputpath = string(fs::current_path()) + "/outputs/" + newfile + "/" + outputname + "/";
             fs::create_directories(outputpath);
+
             graph_maker(output, outputpath, outputname, ns, date);
+
             cout << GREEN << "Output is saved to the directory: " << RESET << outputpath << endl;
         }
 
@@ -341,7 +396,7 @@ int main()
     string data_format;
     ifstream data_format_reader(data_format_path);
 
-    Out_hist << "Fall-Mean,Rise-Mean,Integral-Mean,Peak_Volt-Mean,Peak_Time-Mean,Fall-Std,Rise-Std,Integral-Std,Peak_Volt-Std,Peak_Time-Std,";
+    Out_hist << "Entries,Fall-Mean,Rise-Mean,Integral-Mean,Peak_Volt-Mean,Peak_Time-Mean,Fall-Std,Rise-Std,Integral-Std,Peak_Volt-Std,Peak_Time-Std,";
 
     while (getline(data_format_reader, data_format))
     {
@@ -353,15 +408,29 @@ int main()
         Out_hist << "\n"
                  << results[k];
     }
-    Out_hist.close();
-    data_format_reader.close();
 
     string root_path = string(fs::current_path()) + "/outputs/" + data_path;
     string hadd_command = "hadd -f outputs/" + data_path + ".root `find " + root_path + " -type f -name '*.root'`";
     system(hadd_command.c_str());
 
     cout << GREEN << "Histogram Result Saved to The Directory: " << RESET << output_hist << endl;
-    cout << GREEN << "Root Result Saved to The Directory: " << RESET << root_path + ".root" << endl;
+    cout << GREEN << "Root Result Saved to the Directory: " << RESET << root_path + ".root" << endl;
+
+    string output_errors = string(fs::current_path()) + "/outputs/" + data_path + "_errors.txt";
+    ofstream Out_errors(output_errors.c_str());
+
+    if (errors.size() > 0)
+    {
+        cout << RED << "Errors Saved to the Directory: " << RESET << output_errors + ".txt" << endl;
+        for (int k = 0; k < errors.size(); ++k)
+        {
+            Out_errors << errors[k] << "\n";
+        }
+    }
+
+    Out_errors.close();
+    Out_hist.close();
+    data_format_reader.close();
 
     remove("temp_FoundFiles.txt");
     gROOT->Reset();
