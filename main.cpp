@@ -128,17 +128,17 @@ void graph_maker(vector<vector<double>> input, string output_path, string output
     }
 
     // Create Histograms
-    string h_fall_title = outputname + " - Fall Time";
-    string h_rise_title = outputname + " - Rise Time";
-    string h_integral_title = outputname + " - Fall Integral";
-    string h_peak_volt_title = outputname + " - Peak Voltage";
-    string h_peak_time_title = outputname + " - Peak Time";
+    string h_fall_title = date + "_" + outputname + " - Fall Time";
+    string h_rise_title = date + "_" + outputname + " - Rise Time";
+    string h_integral_title = date + "_" + outputname + " - Fall Integral";
+    string h_peak_volt_title = date + "_" + outputname + " - Peak Voltage";
+    string h_peak_time_title = date + "_" + outputname + " - Peak Time";
 
-    string fall_histname = "h_fall_" + outputname;
-    string rise_histname = "h_rise_" + outputname;
-    string integral_histname = "h_integral_" + outputname;
-    string peak_volt_histname = "h_peak_volt_" + outputname;
-    string peak_time_histname = "h_peak_time_" + outputname;
+    string fall_histname = "h_fall_" + date + "_" + outputname;
+    string rise_histname = "h_rise_" + date + "_" + outputname;
+    string integral_histname = "h_integral_" + date + "_" + outputname;
+    string peak_volt_histname = "h_peak_volt_" + date + "_" + outputname;
+    string peak_time_histname = "h_peak_time_" + date + "_" + outputname;
 
     TH1 *h_fall = new TH1D(fall_histname.c_str(), h_fall_title.c_str(), 10, *min_element(falltime.begin(), falltime.end()), *max_element(falltime.begin(), falltime.end()));
     TH1 *h_rise = new TH1D(rise_histname.c_str(), h_rise_title.c_str(), 10, *min_element(risetime.begin(), risetime.end()), *max_element(risetime.begin(), risetime.end()));
@@ -208,6 +208,14 @@ void graph_maker(vector<vector<double>> input, string output_path, string output
     rootfile->Close();
 }
 
+string folder_selector(string path) // Find all txt files in the folder
+{
+    string found_files_path = "temp_FoundFiles.txt";
+    string command = "find " + path + " -type f -name '*.txt'> " + found_files_path;
+    system(command.c_str());
+    return found_files_path;
+}
+
 int main()
 {
     vector<vector<double>> output;
@@ -240,13 +248,53 @@ int main()
          << "\n"
          << RESET << endl;
 
-    string found_name = string(fs::current_path()) + "/FoundFiles.txt";
+    // Ask For Data Folder, Data Format and Sampling Time
+    string found_name;
+    string data_path;
+    string ns_string;
+    string data_format_path;
+
+    cout << "Data Folder Path (For Default press ENTER): ";
+    getline(cin, data_path);
+
+    if (data_path == "")
+    {
+        data_path = "data";
+    }
+
+    found_name = folder_selector(data_path);
+
+    cout << "Data Format Path (For Default press ENTER, For Custom '0'): ";
+    getline(cin, data_format_path);
+
+    if (data_format_path == "")
+    {
+        data_format_path = "DefaultFormat.txt";
+    }
+
+    if (data_format_path == "0")
+    {
+        data_format_path = "CustomFormat.txt";
+    }
+
+    cout << "Sampling Time(ns) (For Default-2.5ns press ENTER):";
+    getline(cin, ns_string);
+
+    double ns;
+    if (ns_string == "")
+    {
+        ns = 2.5e-9;
+    }
+
+    else
+    {
+        ns = 1e-9 * stod(ns_string.c_str());
+    }
+
+    // Loop Through All Files
     std::ifstream inputfile(found_name);
     std::string filename;
-    string ns_string;
-    cout << "Sampling Time(ns):";
-    getline(cin, ns_string);
-    double ns = 1e-9 * stod(ns_string.c_str());
+
     while (std::getline(inputfile, filename))
     {
         count += 1;
@@ -286,19 +334,36 @@ int main()
         delete datafile;
     }
 
-    string output_hist = string(fs::current_path()) + "/outputs" + "/hist_result.txt";
+    // Write Histogram Results
+    string output_hist = string(fs::current_path()) + "/outputs/" + data_path + "_hist_result.txt";
     ofstream Out_hist(output_hist.c_str());
 
+    string data_format;
+    ifstream data_format_reader(data_format_path);
+
     Out_hist << "Fall-Mean,Rise-Mean,Integral-Mean,Peak_Volt-Mean,Peak_Time-Mean,Fall-Std,Rise-Std,Integral-Std,Peak_Volt-Std,Peak_Time-Std,";
-    Out_hist << "Date,Source,Scintillator,Segment,Threshold,Trial,";
-    Out_hist << "PLACEHOLDER,PLACEHOLDER,PLACEHOLDER,PLACEHOLDER,PLACEHOLDER,PLACEHOLDER,PLACEHOLDER,PLACEHOLDER";
+
+    while (getline(data_format_reader, data_format))
+    {
+        Out_hist << data_format;
+    }
+
     for (int k = 0; k < results.size(); ++k)
     {
         Out_hist << "\n"
                  << results[k];
     }
     Out_hist.close();
+    data_format_reader.close();
 
+    string root_path = string(fs::current_path()) + "/outputs/" + data_path;
+    string hadd_command = "hadd -f outputs/" + data_path + ".root `find " + root_path + " -type f -name '*.root'`";
+    system(hadd_command.c_str());
+
+    cout << GREEN << "Histogram Result Saved to The Directory: " << RESET << output_hist << endl;
+    cout << GREEN << "Root Result Saved to The Directory: " << RESET << root_path + ".root" << endl;
+
+    remove("temp_FoundFiles.txt");
     gROOT->Reset();
     return 0;
 }
