@@ -213,12 +213,12 @@ void analyser(vector<vector<double>> input, string output_path, string outputnam
 
     // Merge Histogram Data as a String:
     string result;
-    for (int k = 0; k < hist_result.size(); ++k)
+    for (int k = 0; k < int(hist_result.size()); ++k)
     {
         result = result + hist_result[k] + ",";
     }
     result.append(date);
-    for (int k = 0; k < name_split.size(); ++k)
+    for (int k = 0; k < int(name_split.size()); ++k)
     {
         result.append("," + name_split[k]);
     }
@@ -252,7 +252,11 @@ string folder_selector(string path) // Find all txt files in the folder
 {
     string found_files_path = "temp_FoundFiles.txt";
     string command = "find " + path + " -type f -name '*.txt'> " + found_files_path;
-    system(command.c_str());
+    int systemErr = system(command.c_str());
+    if (systemErr == -1)
+    {
+        cout << RED << "ERROR - COULD NOT FOUND TXT FILES IN THE PATH" << endl;
+    }
     return found_files_path;
 }
 
@@ -432,7 +436,7 @@ int main()
         delete datafile;
     }
 
-    // Write Histogram Results
+    // Write Histogram Results:
     string output_hist = string(fs::current_path()) + "/outputs/" + data_path + "_hist_result.txt";
     ofstream Out_hist(output_hist.c_str());
 
@@ -446,7 +450,7 @@ int main()
         Out_hist << data_format;
     }
 
-    for (int k = 0; k < results.size(); ++k) // Write Results
+    for (int k = 0; k < int(results.size()); ++k) // Write Results
     {
         Out_hist << "\n"
                  << results[k];
@@ -454,7 +458,12 @@ int main()
 
     string root_path = string(fs::current_path()) + "/outputs/" + data_path;
     string hadd_command = "hadd -v 0 -f outputs/" + data_path + ".root `find " + root_path + " -type f -name '*.root'`";
-    system(hadd_command.c_str()); // Merge all Histograms and Plots
+
+    int systemErr = system(hadd_command.c_str()); // Merge all ROOT Files
+    if (systemErr == -1)
+    {
+        cout << RED << "ERROR - COULD NOT MERGE ROOT FILES" << endl;
+    }
 
     cout << GREEN << "Histogram Result Saved to The Directory: " << RESET << output_hist << endl;
     cout << GREEN << "Root Result Saved to the Directory: " << RESET << root_path + ".root" << endl;
@@ -464,8 +473,8 @@ int main()
         string output_errors = string(fs::current_path()) + "/outputs/" + data_path + "_errors.txt";
         ofstream Out_errors(output_errors.c_str());
 
-        cout << RED << "Errors Saved to the Directory: " << RESET << output_errors + ".txt" << endl;
-        for (int k = 0; k < errors.size(); ++k)
+        cout << RED << "Errors Saved to the Directory: " << RESET << output_errors << endl;
+        for (int k = 0; k < int(errors.size()); ++k)
         {
             Out_errors << errors[k] << "\n";
         }
