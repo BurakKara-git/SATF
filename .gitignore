@@ -1,8 +1,6 @@
 /data
 /outputs
 /commands
-/outputs_test
-test.cpp
+/old
 satforce
 FoundFiles.txt
-result.root

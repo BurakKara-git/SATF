@@ -8,12 +8,12 @@
 #define RED "\033[31m"
 #define BOLDORANGE "\033[1;38;5;202m"
 #define ORANGE "\033[38;5;202m"
-#define BLUE "\033[34m" 
-#define YELLOW "\033[33m" 
+#define BLUE "\033[34m"
+#define YELLOW "\033[33m"
 #define BOLDYELLOW "\033[1;33m"
 #define GREEN "\033[32m"
 
-#endif 
+#endif
 
 // BASIC LIBRARIES
 
@@ -31,10 +31,8 @@
 #include <signal.h>
 #include <cstdlib>
 #include <iomanip>
-#include <algorithm>  
+#include <algorithm>
 #include <filesystem>
-
-
 
 #endif
 
@@ -43,6 +41,9 @@
 #ifndef rooth
 #define rooth
 
+#include "TF1.h"
+#include "TChain.h"
+#include "TError.h"
 #include "TDirectory.h"
 #include "TFile.h"
 #include "TTree.h"
@@ -57,9 +58,5 @@
 #include "TFrame.h"
 #include "TSystem.h"
 #include "TStyle.h"
-
-
-
-
 
 #endif
