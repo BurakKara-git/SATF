@@ -1,69 +1,9 @@
 #include "essential.h"
+#include "functions.h"
 using namespace std;
 namespace fs = std::filesystem;
 vector<string> results;
 vector<string> errors;
-
-vector<string> splitter(string name, string DELIMITER) // Split string, Return string vector
-{
-    vector<string> name_split;
-    char *token = strtok(name.data(), DELIMITER.c_str());
-    while (token != NULL)
-    {
-        name_split.push_back(token);
-        token = strtok(NULL, DELIMITER.c_str());
-    }
-    delete token;
-    return name_split;
-}
-
-vector<vector<double>> reader(ifstream &thefile) // Generate The Matrix
-{
-    string line;
-    vector<vector<string>> matrix;
-    vector<vector<double>> empty;
-    int n_rows = 0;
-    int n_columns = 0;
-
-    while (getline(thefile, line))
-    {
-        istringstream ss(line);
-        string element;
-        vector<string> row;
-
-        while (ss >> element)
-        {
-            row.push_back(element);
-        }
-        matrix.push_back(row);
-        n_rows++;
-        if (n_columns == 0)
-        {
-            n_columns = row.size();
-        }
-    }
-
-    // Transpose the matrix:
-    vector<vector<double>> transpose(n_columns, vector<double>(n_rows));
-    for (int i = 0; i < n_columns; i++)
-    {
-        for (int j = 0; j < n_rows; j++)
-        {
-            transpose[i][j] = stof(matrix[j][i]); // convert string to float values
-        }
-    }
-
-    cout << "\n"
-            " "
-            "# of rows      :  "
-         << n_rows << "\n"
-         << " "
-            "# of columns   :  "
-         << n_columns << "\n"
-         << endl;
-
-    return transpose;
-}
 
 void analyser(vector<vector<double>> input, string output_path, string outputname, double ns, string date) // Analysis
 {
@@ -248,70 +188,9 @@ void analyser(vector<vector<double>> input, string output_path, string outputnam
     rootfile->Close();
 }
 
-string folder_selector(string path) // Find all txt files in the folder
-{
-    string found_files_path = "temp_FoundFiles.txt";
-    string command = "find " + path + " -type f -name '*.txt'> " + found_files_path;
-    int systemErr = system(command.c_str());
-    if (systemErr == -1)
-    {
-        cout << RED << "ERROR - COULD NOT FOUND TXT FILES IN THE PATH" << endl;
-    }
-    return found_files_path;
-}
-
-int line_counter(string path) // Count number of data
-{
-    unsigned int lines = 0;
-
-    std::ifstream inputfile(path);
-    std::string filename;
-    while (std::getline(inputfile, filename))
-    {
-        lines += 1;
-    }
-    return lines;
-}
-
-bool is_number(const std::string &s) // Check if string is a number
-{
-    char *end = nullptr;
-    double val = strtod(s.c_str(), &end);
-    return end != s.c_str() && *end == '\0' && val != HUGE_VAL;
-}
-
-void interface() // Cool
-{
-    cout << BOLDORANGE << "\n"
-         << "_____________________________________________"
-         << "\n"
-         << "                                             "
-         << "\n"
-         << "    _____      _______            ______     "
-         << "\n"
-         << "   / ____|  /\\|__   __|          |  ____|   "
-         << "\n"
-         << "  | (___   /  \\  | |     ______  | |__      "
-         << "\n"
-         << "   \\___ \\ / /\\ \\ | |    |______| |  __|  "
-         << "\n"
-         << "   ____) / ____ \\| |             | |        "
-         << "\n"
-         << "  |_____/_/    \\_\\_|             |_|       "
-         << "\n"
-         << "                                             "
-         << "\n"
-         << RESET << ORANGE
-         << "        SAT-Force Analysis Interface         "
-         << "\n"
-         << RESET << BOLDORANGE
-         << "_____________________________________________"
-         << "\n"
-         << RESET << endl;
-}
-
 int main()
 {
+
     interface(); // Load Interface Logo
 
     // Initialize Variables:
@@ -323,167 +202,210 @@ int main()
     string ns_string;
     string data_format_path;
     double ns;
+    string option;
+    cout << "Type 'compare' or Press ENTER: ";
+    getline(cin, option);
 
-    while (true) // Ask For Data Folder
+    if (option == "compare") // Compare an existing histogram result file
     {
-        cout << "Data Folder Path (For Default press ENTER): ";
-        getline(cin, data_path);
+        string option_source;
+        string option_scintillator;
+        string option_path;
 
-        if (data_path == "")
+        cout << "Histogram Path (For Default Press Enter): ";
+        getline(cin, option_path);
+
+        if (option_path == "")
         {
-            data_path = "data";
-        }
-
-        if (std::filesystem::exists(data_path))
-        {
-            found_name = folder_selector(data_path);
-            break;
-        }
-
-        else
-        {
-            cout << RED << "ERROR: FILE DOES NOT EXIST!" << RESET << endl;
-        }
-    }
-
-    while (true) // Ask For Data Format
-    {
-        cout << "Data Format Path (For Default press ENTER, For Custom '0'): ";
-        getline(cin, data_format_path);
-
-        if (data_format_path == "")
-        {
-            data_format_path = "DefaultFormat.txt";
-        }
-
-        if (data_format_path == "0")
-        {
-            data_format_path = "CustomFormat.txt";
-        }
-
-        if (std::filesystem::exists(data_format_path))
-        {
-            break;
-        }
-
-        else
-        {
-            cout << RED << "ERROR: FILE DOES NOT EXIST!" << RESET << endl;
-        }
-    }
-
-    while (true) // Ask For Sampling Time
-    {
-        cout << "Sampling Time(ns) (For Default-2.5ns press ENTER):";
-        getline(cin, ns_string);
-        if (ns_string == "")
-        {
-            ns = 2.5e-9;
-            break;
-        }
-        if (is_number(ns_string))
-        {
-            ns = 1e-9 * stod(ns_string.c_str());
-            break;
-        }
-        else
-        {
-            cout << RED << "ERROR: INPUT IS NOT A NUMBER!" << RESET << endl;
-        }
-    }
-
-    std::ifstream inputfile(found_name);
-    std::string filename;
-    no_of_data = line_counter(found_name);
-
-    while (std::getline(inputfile, filename)) // Loop Through All Files
-    {
-        count += 1;
-        ifstream *datafile = new ifstream;
-        datafile->open(filename.c_str());
-        if (datafile != nullptr)
-        {
-            cout << "\n" GREEN "Successfully opened the file: " << count << "/" << no_of_data << RESET << endl;
-            cout << YELLOW << "File name: " << RESET << filename << endl;
-
-            // Skip 24 Lines, not containing data
-            for (int i = 0; i < 24; ++i)
+            option_path = string(fs::current_path()) + "/outputs/data/data_hist_result.txt";
+            if (std::filesystem::exists(option_path))
             {
-                string line;
-                getline(*datafile, line);
+                cout << GREEN << "OPENED FILE" << RESET << endl;
+            }
+            else
+            {
+                cout << RED << "FILE NOT FOUND" << RESET << endl;
+                return 0;
+            }
+        }
+        else
+        {
+        }
+
+        cout << "Source (Ba133, Co57, Cs137, NoSource): ";
+        getline(cin, option_source);
+        cout << "Scintillator (EJ276, CR001, CR002, CR003): ";
+        getline(cin, option_scintillator);
+
+        full_compare(option_path, option_source, option_scintillator);
+        return 0;
+    }
+
+    else
+    {
+        while (true) // Ask For Data Folder
+        {
+            cout << "Data Folder Path (For Default press ENTER): ";
+            getline(cin, data_path);
+
+            if (data_path == "")
+            {
+                data_path = "data";
             }
 
-            output = reader(*datafile);
-            string outputname = filename.substr(0, filename.length() - 4);
-            unsigned first = filename.find("data/");
-            unsigned last = filename.find_last_of("/");
-            string newfile = filename.substr(first, last - first);
-            string date = newfile.substr(5);
-            int index = outputname.find_last_of("/");
-            outputname = outputname.substr(index + 1);
-            string outputpath = string(fs::current_path()) + "/outputs/" + newfile + "/" + outputname + "/";
-            fs::create_directories(outputpath);
+            if (std::filesystem::exists(data_path))
+            {
+                found_name = folder_selector(data_path);
+                break;
+            }
 
-            analyser(output, outputpath, outputname, ns, date);
-
-            cout << GREEN << "Output is saved to the directory: " << RESET << outputpath << endl;
+            else
+            {
+                cout << RED << "ERROR: FILE DOES NOT EXIST!" << RESET << endl;
+            }
         }
 
-        else
+        while (true) // Ask For Data Format
         {
-            cout << RED "ERROR: Could not open the file." RESET << endl;
+            cout << "Data Format Path (For Default press ENTER, For Custom '0'): ";
+            getline(cin, data_format_path);
+
+            if (data_format_path == "")
+            {
+                data_format_path = "DefaultFormat.txt";
+            }
+
+            if (data_format_path == "0")
+            {
+                data_format_path = "CustomFormat.txt";
+            }
+
+            if (std::filesystem::exists(data_format_path))
+            {
+                break;
+            }
+
+            else
+            {
+                cout << RED << "ERROR: FILE DOES NOT EXIST!" << RESET << endl;
+            }
         }
-        delete datafile;
-    }
 
-    // Write Histogram Results:
-    string output_hist = string(fs::current_path()) + "/outputs/" + data_path + "_hist_result.txt";
-    ofstream Out_hist(output_hist.c_str());
-
-    string data_format;
-    ifstream data_format_reader(data_format_path);
-
-    Out_hist << "Entries,Fall-Mean,Rise-Mean,Integral-Mean,Peak_Volt-Mean,Peak_Time-Mean,Fall-Std,Rise-Std,Integral-Std,Peak_Volt-Std,Peak_Time-Std,";
-
-    while (getline(data_format_reader, data_format)) // Write Data Format
-    {
-        Out_hist << data_format;
-    }
-
-    for (int k = 0; k < int(results.size()); ++k) // Write Results
-    {
-        Out_hist << "\n"
-                 << results[k];
-    }
-
-    string root_path = string(fs::current_path()) + "/outputs/" + data_path;
-    string hadd_command = "hadd -v 0 -f outputs/" + data_path + ".root `find " + root_path + " -type f -name '*.root'`";
-
-    int systemErr = system(hadd_command.c_str()); // Merge all ROOT Files
-    if (systemErr == -1)
-    {
-        cout << RED << "ERROR - COULD NOT MERGE ROOT FILES" << endl;
-    }
-
-    cout << GREEN << "Histogram Result Saved to The Directory: " << RESET << output_hist << endl;
-    cout << GREEN << "Root Result Saved to the Directory: " << RESET << root_path + ".root" << endl;
-
-    if (errors.size() > 0) // Write Errors as TXT
-    {
-        string output_errors = string(fs::current_path()) + "/outputs/" + data_path + "_errors.txt";
-        ofstream Out_errors(output_errors.c_str());
-
-        cout << RED << "Errors Saved to the Directory: " << RESET << output_errors << endl;
-        for (int k = 0; k < int(errors.size()); ++k)
+        while (true) // Ask For Sampling Time
         {
-            Out_errors << errors[k] << "\n";
+            cout << "Sampling Time(ns) (For Default-2.5ns press ENTER):";
+            getline(cin, ns_string);
+            if (ns_string == "")
+            {
+                ns = 2.5e-9;
+                break;
+            }
+            if (is_number(ns_string))
+            {
+                ns = 1e-9 * stod(ns_string.c_str());
+                break;
+            }
+            else
+            {
+                cout << RED << "ERROR: INPUT IS NOT A NUMBER!" << RESET << endl;
+            }
         }
-        Out_errors.close();
-    }
 
-    remove("temp_FoundFiles.txt");
-    Out_hist.close();
-    data_format_reader.close();
-    gROOT->Reset();
-    return 0;
+        std::ifstream inputfile(found_name);
+        std::string filename;
+        no_of_data = line_counter(found_name);
+
+        while (std::getline(inputfile, filename)) // Loop Through All Files
+        {
+            count += 1;
+            ifstream *datafile = new ifstream;
+            datafile->open(filename.c_str());
+            if (datafile != nullptr)
+            {
+                cout << "\n" GREEN "Successfully opened the file: " << count << "/" << no_of_data << RESET << endl;
+                cout << YELLOW << "File name: " << RESET << filename << endl;
+
+                // Skip 24 Lines, not containing data
+                for (int i = 0; i < 24; ++i)
+                {
+                    string line;
+                    getline(*datafile, line);
+                }
+
+                output = reader(*datafile);
+                string outputname = filename.substr(0, filename.length() - 4);
+                unsigned first = filename.find("data/");
+                unsigned last = filename.find_last_of("/");
+                string newfile = filename.substr(first, last - first);
+                string date = newfile.substr(5);
+                int index = outputname.find_last_of("/");
+                outputname = outputname.substr(index + 1);
+                string outputpath = string(fs::current_path()) + "/outputs/" + newfile + "/" + outputname + "/";
+                fs::create_directories(outputpath);
+
+                analyser(output, outputpath, outputname, ns, date);
+
+                cout << GREEN << "Output is saved to the directory: " << RESET << outputpath << endl;
+            }
+
+            else
+            {
+                cout << RED "ERROR: Could not open the file." RESET << endl;
+            }
+            delete datafile;
+        }
+
+        // Write Histogram Results:
+        string output_hist = string(fs::current_path()) + "/outputs/" + data_path + "_hist_result.txt";
+        ofstream Out_hist(output_hist.c_str());
+
+        string data_format;
+        ifstream data_format_reader(data_format_path);
+        string temp_data_format;
+        temp_data_format = "Entries,FallMean,RiseMean,IntegralMean,PeakVoltMean,PeakTimeMean,FallStd,RiseStd,IntegralStd,PeakVoltStd,PeakTimeStd,";
+
+        Out_hist << temp_data_format;
+
+        while (getline(data_format_reader, data_format)) // Write Data Format
+        {
+            Out_hist << data_format;
+        }
+
+        for (int k = 0; k < int(results.size()); ++k) // Write Results
+        {
+            Out_hist << "\n"
+                     << results[k];
+        }
+        Out_hist.close();
+
+        string root_path = string(fs::current_path()) + "/outputs/" + data_path;
+        string hadd_command = "hadd -v 0 -f outputs/" + data_path + ".root `find " + root_path + " -type f -name '*.root'`";
+
+        int systemErr = system(hadd_command.c_str()); // Merge all ROOT Files
+        if (systemErr == -1)
+        {
+            cout << RED << "ERROR - COULD NOT MERGE ROOT FILES" << endl;
+        }
+
+        cout << GREEN << "Histogram Result Saved to The Directory: " << RESET << output_hist << endl;
+        cout << GREEN << "Root Result Saved to the Directory: " << RESET << root_path + ".root" << endl;
+
+        if (errors.size() > 0) // Write Errors as TXT
+        {
+            string output_errors = string(fs::current_path()) + "/outputs/" + data_path + "_errors.csv";
+            ofstream Out_errors(output_errors.c_str());
+
+            cout << RED << "Errors Saved to the Directory: " << RESET << output_errors << endl;
+            for (int k = 0; k < int(errors.size()); ++k)
+            {
+                Out_errors << errors[k] << "\n";
+            }
+            Out_errors.close();
+        }
+
+        remove("temp_FoundFiles.txt");
+        data_format_reader.close();
+        gROOT->Reset();
+        return 0;
+    }
 }
