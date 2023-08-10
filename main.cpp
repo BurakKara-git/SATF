@@ -63,7 +63,7 @@ void analyser(vector<vector<double>> input, string output_path, string outputnam
 
         if (isnan(risetime.back()) || isnan(falltime.back()) || isnan(integrals.back())) // Write Corrupted Data
         {
-            cout << RED << "ERROR - NAN VALUE AT: " << RESET << output_path << ", Segment: " << j + 1 << endl;
+            cout << RED << "ERROR - NAN VALUE: " << RESET << output_path << ", Segment: " << j + 1 << endl;
 
             // Graph Design
             TCanvas *c1 = new TCanvas("c1", "c1", 200, 10, 600, 400);

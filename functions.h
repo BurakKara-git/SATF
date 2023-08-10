@@ -154,7 +154,7 @@ vector<vector<string>> hist_reader(ifstream &thefile) // Read Output Histogram D
     return transpose;
 }
 
-void compare_hist(vector<vector<double>> data, string filter1, string filter2, string hist_type) // Create Histograms for Certain Combinations
+void compare_hist(vector<vector<double>> data, string filter1, string filter2, string hist_type, string output_path) // Create Histograms for Certain Combinations
 {
     vector<string> temp_source_type = splitter(filter1, ",");
     vector<string> temp_scintillator_type = splitter(filter2, ",");
@@ -175,6 +175,7 @@ void compare_hist(vector<vector<double>> data, string filter1, string filter2, s
     {
         histo->Fill(data[i][0]);
     }
+
     /*
         double std = histo->GetStdDev();
     delete histo;
@@ -189,9 +190,7 @@ void compare_hist(vector<vector<double>> data, string filter1, string filter2, s
 
     histo->Draw();
 
-    string output_directory = string(fs::current_path()) + "/outputs/compare/" + tail_source + "_" + tail_scintillator + "/";
-    fs::create_directories(output_directory.c_str());
-    string histo_file_name = output_directory + histo_name + ".pdf";
+    string histo_file_name = output_path + histo_name + ".pdf";
     c_hist->Print(histo_file_name.c_str());
 
     delete c_hist;
@@ -235,6 +234,10 @@ vector<int> filter(vector<vector<string>> data, string source_type, string scint
 
 void full_compare(string hist_path) // filter + compare_hist
 {
+    gErrorIgnoreLevel = kFatal; // Verbose Mode
+    vector<string> temp_hist_data_source = splitter(hist_path,"/");
+    temp_hist_data_source = splitter(temp_hist_data_source.back(),"_");
+    string hist_data_source = temp_hist_data_source[0];
     vector<vector<string>> hist_output;
     ifstream *hist_file = new ifstream;
     hist_file->open(hist_path.c_str());
@@ -257,6 +260,10 @@ void full_compare(string hist_path) // filter + compare_hist
 
             else
             {
+                string compare_root_path = string(fs::current_path()) + "/outputs/compare/" + hist_data_source + "/" + option_source[isource] + "_" + option_scintillator[iscintillator] + "/";
+                string compare_root_name = compare_root_path + "compare_hist.root";
+                fs::create_directories(compare_root_path.c_str());
+                TFile *hist_root_file = new TFile(compare_root_name.c_str(), "RECREATE");
                 for (int t = 1; t < 6; ++t)
                 {
                     vector<vector<double>> hist_values;
@@ -272,11 +279,22 @@ void full_compare(string hist_path) // filter + compare_hist
                     }
                     string filter3 = hist_output[t][0];
 
-                    compare_hist(hist_values, filter1, filter2, filter3);
+                    compare_hist(hist_values, filter1, filter2, filter3, compare_root_path);
                 }
+                hist_root_file->Write();
+                delete hist_root_file;
+                cout << GREEN << "RESULT SAVED TO THE DIRECTORY: " << RESET << compare_root_path << endl;
             }
         }
     }
+
+    string hadd_command = "hadd -f outputs/compare/" + hist_data_source + "/" + hist_data_source + "_compare_hist.root `find outputs/compare/" + hist_data_source + "/" + " -type f -name '*.root'`";
+
+        int systemErr = system(hadd_command.c_str()); // Merge all ROOT Files
+        if (systemErr == -1)
+        {
+            cout << RED << "ERROR - COULD NOT MERGE ROOT FILES" << endl;
+        }
 
     delete hist_file;
 }
