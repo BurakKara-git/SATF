@@ -374,7 +374,7 @@ int main()
         temp_data_format = "Entries,FallMean,RiseMean,IntegralMean,PeakVoltMean,PeakTimeMean,FallStd,RiseStd,IntegralStd,PeakVoltStd,PeakTimeStd,";
 
         Out_hist << temp_data_format;
-
+        
         while (getline(data_format_reader, data_format)) // Write Data Format
         {
             Out_hist << data_format;
@@ -387,14 +387,10 @@ int main()
         }
         Out_hist.close();
 
+        string hadd_path = "outputs/" + data_path + ".root";
         string root_path = string(fs::current_path()) + "/outputs/" + data_path;
-        string hadd_command = "hadd -f outputs/" + data_path + ".root `find " + root_path + " -type f -name '*.root'`";
 
-        int systemErr = system(hadd_command.c_str()); // Merge all ROOT Files
-        if (systemErr == -1)
-        {
-            cout << RED << "ERROR - COULD NOT MERGE ROOT FILES" << endl;
-        }
+        hadd_creator(hadd_path,root_path); // Merge Root Files        
 
         cout << GREEN << "Histogram Result Saved to The Directory: " << RESET << output_hist << endl;
         cout << GREEN << "Root Result Saved to the Directory: " << RESET << root_path + ".root" << endl;

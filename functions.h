@@ -146,7 +146,6 @@ vector<vector<string>> hist_reader(ifstream &thefile) // Read Output Histogram D
     {
         for (int j = 0; j < n_rows; j++)
         {
-            // transpose[i][j] = stof(matrix[j][i]); // convert string to float values
             transpose[i][j] = matrix[j][i];
         }
     }
@@ -167,7 +166,7 @@ void compare_hist(vector<vector<double>> data, string filter1, string filter2, s
     // double min_std = *min_element(data[1].begin(), data[1].end());
     double min_val = *min_element(data[0].begin(), data[0].end());
     double max_val = *max_element(data[0].begin(), data[0].end());
-    int bin_num = 100;
+    int bin_num = 50;
     TCanvas *c_hist = new TCanvas("c1", "c1", 200, 10, 600, 400);
     c_hist->SetGrid();
     TH1 *histo = new TH1D(histo_name.c_str(), histo_name.c_str(), bin_num, min_val, max_val);
@@ -177,7 +176,7 @@ void compare_hist(vector<vector<double>> data, string filter1, string filter2, s
     }
 
     /*
-        double std = histo->GetStdDev();
+    double std = histo->GetStdDev();
     delete histo;
     bin_num = abs((max_val - min_val) / std);
     TH1 *new_histo = new TH1D(histo_name.c_str(), histo_name.c_str(), bin_num, min_val, max_val);
@@ -194,6 +193,7 @@ void compare_hist(vector<vector<double>> data, string filter1, string filter2, s
     c_hist->Print(histo_file_name.c_str());
 
     delete c_hist;
+    delete histo;
 }
 
 vector<int> filter(vector<vector<string>> data, string source_type, string scintillator_type) // Filter Combinations
@@ -232,16 +232,39 @@ vector<int> filter(vector<vector<string>> data, string source_type, string scint
     return data_positions;
 }
 
+void hadd_creator(string hadd_path, string input_path)
+{
+    //string hadd_path = "outputs/compare/" + hist_data_source + "/" + hist_data_source + "_compare_hist.root";
+    string hadd_command = "hadd -f " + hadd_path + " `find " + input_path + " -type f -name '*.root'`";
+
+    if (std::filesystem::exists(hadd_path))
+    {
+        remove(hadd_path.c_str());
+    }
+
+    int systemErr = system(hadd_command.c_str()); // Merge all ROOT Files
+    if (systemErr == -1)
+    {
+        cout << RED << "ERROR - COULD NOT MERGE ROOT FILES" << endl;
+    }
+}
+
 void full_compare(string hist_path) // filter + compare_hist
 {
     gErrorIgnoreLevel = kFatal; // Verbose Mode
-    vector<string> temp_hist_data_source = splitter(hist_path,"/");
-    temp_hist_data_source = splitter(temp_hist_data_source.back(),"_");
+
+    // Find Date of the Source File:
+    vector<string> temp_hist_data_source = splitter(hist_path, "/");
+    temp_hist_data_source = splitter(temp_hist_data_source.back(), "_");
     string hist_data_source = temp_hist_data_source[0];
+
+    // Read the Histogram Result File:
     vector<vector<string>> hist_output;
     ifstream *hist_file = new ifstream;
     hist_file->open(hist_path.c_str());
     hist_output = hist_reader(*hist_file);
+
+    // Generate Result For All Sources and Scintillators:
     vector<string> option_source = {"Ba133", "Cs137", "Co57"};
     vector<string> option_scintillator = {"EJ276", "CR001", "CR002", "CR003"};
     for (int isource = 0; isource < int(option_source.size()); ++isource)
@@ -250,8 +273,7 @@ void full_compare(string hist_path) // filter + compare_hist
         {
             string filter1 = "Source," + option_source[isource];
             string filter2 = "Scintillator," + option_scintillator[iscintillator];
-
-            vector<int> positions = filter(hist_output, filter1, filter2); //?
+            vector<int> positions = filter(hist_output, filter1, filter2); // Find Positions of Valid Combinations
 
             if (positions.size() == 0)
             {
@@ -260,11 +282,13 @@ void full_compare(string hist_path) // filter + compare_hist
 
             else
             {
+                // Create Directories and Initialize Root File:
                 string compare_root_path = string(fs::current_path()) + "/outputs/compare/" + hist_data_source + "/" + option_source[isource] + "_" + option_scintillator[iscintillator] + "/";
                 string compare_root_name = compare_root_path + "compare_hist.root";
                 fs::create_directories(compare_root_path.c_str());
                 TFile *hist_root_file = new TFile(compare_root_name.c_str(), "RECREATE");
-                for (int t = 1; t < 6; ++t)
+
+                for (int t = 1; t < 6; ++t) // Generate 5 Histograms
                 {
                     vector<vector<double>> hist_values;
                     for (int k = 0; k < int(positions.size()); ++k)
@@ -288,13 +312,10 @@ void full_compare(string hist_path) // filter + compare_hist
         }
     }
 
-    string hadd_command = "hadd -f outputs/compare/" + hist_data_source + "/" + hist_data_source + "_compare_hist.root `find outputs/compare/" + hist_data_source + "/" + " -type f -name '*.root'`";
-
-        int systemErr = system(hadd_command.c_str()); // Merge all ROOT Files
-        if (systemErr == -1)
-        {
-            cout << RED << "ERROR - COULD NOT MERGE ROOT FILES" << endl;
-        }
+    // Merge Root Files:    
+    string hadd_path = "outputs/compare/" + hist_data_source + "/" + hist_data_source + "_compare_hist.root";
+    string hadd_input = "outputs/compare/" + hist_data_source + "/";
+    hadd_creator(hadd_path, hadd_input);    
 
     delete hist_file;
 }
