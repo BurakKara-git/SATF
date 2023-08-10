@@ -2,7 +2,7 @@
 using namespace std;
 namespace fs = std::filesystem;
 
-vector<vector<double>> reader(ifstream &thefile) // Generate The Matrix
+vector<vector<double>> reader(ifstream &thefile) // Generate The Matrix - Hazal's Function
 {
     string line;
     vector<vector<string>> matrix;
@@ -75,7 +75,7 @@ string folder_selector(string path) // Find all txt files in the folder
     return found_files_path;
 }
 
-int line_counter(string path) // Count number of data
+int line_counter(string path) // Count number of lines
 {
     unsigned int lines = 0;
 
@@ -95,7 +95,7 @@ bool is_number(const std::string &s) // Check if string is a number
     return end != s.c_str() && *end == '\0' && val != HUGE_VAL;
 }
 
-void interface() // Cool
+void interface() // Cool - Hazal
 {
     cout << BOLDORANGE << "\n"
          << "_____________________________________________"
@@ -125,7 +125,7 @@ void interface() // Cool
          << RESET << endl;
 }
 
-vector<vector<string>> hist_reader(ifstream &thefile)
+vector<vector<string>> hist_reader(ifstream &thefile) // Read Output Histogram Data
 {
     string line;
     int n_rows = 0;
@@ -154,9 +154,8 @@ vector<vector<string>> hist_reader(ifstream &thefile)
     return transpose;
 }
 
-void compare_hist(vector<vector<double>> data, string filter1, string filter2, string filter3)
+void compare_hist(vector<vector<double>> data, string filter1, string filter2, string hist_type) // Create Histograms for Certain Combinations
 {
-
     vector<string> temp_source_type = splitter(filter1, ",");
     vector<string> temp_scintillator_type = splitter(filter2, ",");
     string head_source = temp_source_type[0];
@@ -164,29 +163,41 @@ void compare_hist(vector<vector<double>> data, string filter1, string filter2, s
     string head_scintillator = temp_scintillator_type[0];
     string tail_scintillator = temp_scintillator_type[1];
 
-    string histo_name = tail_source + "-" + tail_scintillator + "-" + filter3;
-    //double min_std = *min_element(data[1].begin(), data[1].end());
+    string histo_name = tail_source + "-" + tail_scintillator + "-" + hist_type;
+    // double min_std = *min_element(data[1].begin(), data[1].end());
     double min_val = *min_element(data[0].begin(), data[0].end());
     double max_val = *max_element(data[0].begin(), data[0].end());
     int bin_num = 100;
-    TH1 *histo = new TH1D(histo_name.c_str(), histo_name.c_str(), bin_num, min_val / 2, 2 * max_val);
+    TCanvas *c_hist = new TCanvas("c1", "c1", 200, 10, 600, 400);
+    c_hist->SetGrid();
+    TH1 *histo = new TH1D(histo_name.c_str(), histo_name.c_str(), bin_num, min_val, max_val);
     for (int i = 0; i < int(data.size()); ++i)
     {
         histo->Fill(data[i][0]);
     }
-    TCanvas *c_hist = new TCanvas("c1", "c1", 200, 10, 600, 400);
-    c_hist->SetGrid();
+    /*
+        double std = histo->GetStdDev();
+    delete histo;
+    bin_num = abs((max_val - min_val) / std);
+    TH1 *new_histo = new TH1D(histo_name.c_str(), histo_name.c_str(), bin_num, min_val, max_val);
+    for (int i = 0; i < int(data.size()); ++i)
+    {
+        new_histo->Fill(data[i][0]);
+    }
+    new_histo->Draw();
+    */
+
     histo->Draw();
+
     string output_directory = string(fs::current_path()) + "/outputs/compare/" + tail_source + "_" + tail_scintillator + "/";
     fs::create_directories(output_directory.c_str());
     string histo_file_name = output_directory + histo_name + ".pdf";
     c_hist->Print(histo_file_name.c_str());
 
     delete c_hist;
-    delete histo;
 }
 
-vector<int> filter(vector<vector<string>> data, string source_type, string scintillator_type)
+vector<int> filter(vector<vector<string>> data, string source_type, string scintillator_type) // Filter Combinations
 {
     vector<string> temp_source_type = splitter(source_type, ",");
     vector<string> temp_scintillator_type = splitter(scintillator_type, ",");
@@ -222,42 +233,48 @@ vector<int> filter(vector<vector<string>> data, string source_type, string scint
     return data_positions;
 }
 
-void full_compare(string hist_path, string option_source, string option_scintillator)
+void full_compare(string hist_path) // filter + compare_hist
 {
     vector<vector<string>> hist_output;
     ifstream *hist_file = new ifstream;
-
     hist_file->open(hist_path.c_str());
     hist_output = hist_reader(*hist_file);
-
-    string filter1 = "Source," + option_source;
-    string filter2 = "Scintillator," + option_scintillator;
-
-    vector<int> positions = filter(hist_output, filter1, filter2); //?
-
-    if (positions.size() == 0)
+    vector<string> option_source = {"Ba133", "Cs137", "Co57"};
+    vector<string> option_scintillator = {"EJ276", "CR001", "CR002", "CR003"};
+    for (int isource = 0; isource < int(option_source.size()); ++isource)
     {
-        cout << RED << "ERROR - NO COMBINATIONS FOR GIVEN SOURCE SCINTILLATOR" << endl;
-    }
-
-    else
-    {
-        for (int t = 1; t < 6; ++t)
+        for (int iscintillator = 0; iscintillator < int(option_scintillator.size()); ++iscintillator)
         {
-            vector<vector<double>> hist_values;
-            for (int k = 0; k < int(positions.size()); ++k)
-            {
-                int column = positions[k];
-                vector<double> temp_hist_values;
-                double value = stof(hist_output[t][column]);
-                double error = stof(hist_output[t + 5][column]);
-                temp_hist_values.push_back(value);
-                temp_hist_values.push_back(error);
-                hist_values.push_back(temp_hist_values);
-            }
-            string filter3 = hist_output[t][0];
+            string filter1 = "Source," + option_source[isource];
+            string filter2 = "Scintillator," + option_scintillator[iscintillator];
 
-            compare_hist(hist_values, filter1, filter2, filter3);
+            vector<int> positions = filter(hist_output, filter1, filter2); //?
+
+            if (positions.size() == 0)
+            {
+                cout << RED << "ERROR - NO COMBINATIONS FOR: " << option_source[isource] << " - " << option_scintillator[iscintillator] << RESET << endl;
+            }
+
+            else
+            {
+                for (int t = 1; t < 6; ++t)
+                {
+                    vector<vector<double>> hist_values;
+                    for (int k = 0; k < int(positions.size()); ++k)
+                    {
+                        int column = positions[k];
+                        vector<double> temp_hist_values;
+                        double value = stof(hist_output[t][column]);
+                        double error = stof(hist_output[t + 5][column]);
+                        temp_hist_values.push_back(value);
+                        temp_hist_values.push_back(error);
+                        hist_values.push_back(temp_hist_values);
+                    }
+                    string filter3 = hist_output[t][0];
+
+                    compare_hist(hist_values, filter1, filter2, filter3);
+                }
+            }
         }
     }
 

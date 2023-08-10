@@ -190,19 +190,19 @@ void analyser(vector<vector<double>> input, string output_path, string outputnam
 
 int main()
 {
-
     interface(); // Load Interface Logo
 
     // Initialize Variables:
     vector<vector<double>> output;
     int count = 0;
     int no_of_data;
+    double ns;
     string found_name;
     string data_path;
     string ns_string;
     string data_format_path;
-    double ns;
     string option;
+
     cout << "Type 'compare' or Press ENTER: ";
     getline(cin, option);
 
@@ -212,32 +212,41 @@ int main()
         string option_scintillator;
         string option_path;
 
-        cout << "Histogram Path (For Default Press Enter): ";
-        getline(cin, option_path);
-
-        if (option_path == "")
+        while (true) // Ask For Histogram Path
         {
-            option_path = string(fs::current_path()) + "/outputs/data/data_hist_result.txt";
-            if (std::filesystem::exists(option_path))
+            cout << "Histogram Path (For Default Press Enter): ";
+            getline(cin, option_path);
+
+            if (option_path == "")
             {
-                cout << GREEN << "OPENED FILE" << RESET << endl;
+                option_path = string(fs::current_path()) + "/outputs/data_hist_result.txt";
+                if (std::filesystem::exists(option_path))
+                {
+                    cout << GREEN << "OPENED FILE: " + option_path << RESET << endl;
+                    break;
+                }
+                else
+                {
+                    cout << RED << "FILE NOT FOUND: " + option_path << RESET << endl;
+                    return 0;
+                }
             }
             else
             {
-                cout << RED << "FILE NOT FOUND" << RESET << endl;
-                return 0;
+                if (std::filesystem::exists(option_path))
+                {
+                    cout << GREEN << "OPENED FILE: " + option_path << RESET << endl;
+                    break;
+                }
+                else
+                {
+
+                    cout << RED << "FILE NOT FOUND: " + option_path << RESET << endl;
+                }
             }
         }
-        else
-        {
-        }
-
-        cout << "Source (Ba133, Co57, Cs137, NoSource): ";
-        getline(cin, option_source);
-        cout << "Scintillator (EJ276, CR001, CR002, CR003): ";
-        getline(cin, option_scintillator);
-
-        full_compare(option_path, option_source, option_scintillator);
+        
+        full_compare(option_path);
         return 0;
     }
 
@@ -379,7 +388,7 @@ int main()
         Out_hist.close();
 
         string root_path = string(fs::current_path()) + "/outputs/" + data_path;
-        string hadd_command = "hadd -v 0 -f outputs/" + data_path + ".root `find " + root_path + " -type f -name '*.root'`";
+        string hadd_command = "hadd -f outputs/" + data_path + ".root `find " + root_path + " -type f -name '*.root'`";
 
         int systemErr = system(hadd_command.c_str()); // Merge all ROOT Files
         if (systemErr == -1)
@@ -392,7 +401,7 @@ int main()
 
         if (errors.size() > 0) // Write Errors as TXT
         {
-            string output_errors = string(fs::current_path()) + "/outputs/" + data_path + "_errors.csv";
+            string output_errors = string(fs::current_path()) + "/outputs/" + data_path + "_errors.txt";
             ofstream Out_errors(output_errors.c_str());
 
             cout << RED << "Errors Saved to the Directory: " << RESET << output_errors << endl;
