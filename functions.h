@@ -442,6 +442,7 @@ void histogram_result_writer(string data_path, string data_format_path, vector<s
 
 vector<string> analyser(vector<vector<double>> input, string filename, double ns) // Analysis
 {
+    // Create Directories:
     string input_path = filename.substr(0, filename.length() - 4); // Remove .txt
     string outputname = splitter(input_path, "/").back();
     vector<string> vec_input_path = splitter(input_path, "/");
@@ -449,10 +450,11 @@ vector<string> analyser(vector<vector<double>> input, string filename, double ns
     string outputpath = concatenate_vec(head, vec_input_path, "data", "", "/");
     string date = concatenate_vec("", vec_input_path, "data", outputname, "/");
     fs::create_directories(outputpath);
+
+    // Initialize:
     vector<string> results_and_errors;
     string temp_results;
     string temp_errors;
-
     string rootname = outputpath + "result.root";
     TFile *rootfile = new TFile(rootname.c_str(), "RECREATE");
     int no_of_datasets = int(input.size());
@@ -468,7 +470,7 @@ vector<string> analyser(vector<vector<double>> input, string filename, double ns
     vector<double> x_axis(no_of_datas); // time
     for (int i = 0; i < no_of_datas; i++)
     {
-        x_axis[i] = i * ns; // sampling time
+        x_axis[i] = i * ns; // Sampling time
     }
 
     for (int j = 0; j < no_of_datasets; j++)
@@ -616,7 +618,6 @@ vector<string> analyser(vector<vector<double>> input, string filename, double ns
     {
         result.append("," + name_split[k]);
     }
-    // results.push_back(result);
     temp_results = result;
 
     // Write Histograms and Error Plots as a Root File:

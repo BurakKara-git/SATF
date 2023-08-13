@@ -166,18 +166,6 @@ int main()
                 }
 
                 output = reader(*datafile);
-                /*                
-                string outputname = filename.substr(0, filename.length() - 4);
-                unsigned first = filename.find("data/");
-                unsigned last = filename.find_last_of("/");
-                string newfile = filename.substr(first, last - first);
-                string date = newfile.substr(5);
-                int index = outputname.find_last_of("/");
-                outputname = outputname.substr(index + 1);
-                string outputpath = string(fs::current_path()) + "/outputs/" + newfile + "/" + outputname + "/";
-                fs::create_directories(outputpath);
-                */
-
                 vector<string> temp_results_and_errors;
                 temp_results_and_errors = analyser(output, filename, ns);
                 results.push_back(temp_results_and_errors[0]);
