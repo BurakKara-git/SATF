@@ -13,7 +13,7 @@ all: clean $(PROGRAM) run
 
 $(PROGRAM): $(SOURCES)
 	@echo "$(YELLOW)Compiling...$(RESET)"
-	$(CXX) $^ $(FLAGS) $(LIBS) -o $@  
+	h5c++ -shlib $^ $(FLAGS) $(LIBS) -o $@  
 	@echo "$(GREEN)Done!$(RESET)"
 	@echo "$(GREEN)Execute the command$(RESET) $(CYAN)./$(PROGRAM)$(RESET) $(GREEN)or$(RESET) $(CYAN)make run$(RESET) $(GREEN)to run the program.$(RESET)"
 

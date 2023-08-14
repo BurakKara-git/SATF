@@ -1,4 +1,6 @@
 #include "essential.h"
+#include <H5Cpp.h>
+using namespace H5;
 using namespace std;
 namespace fs = std::filesystem;
 
@@ -63,10 +65,10 @@ vector<string> splitter(string name, string DELIMITER) // Split string, Return s
     return name_split;
 }
 
-string folder_selector(string path) // Find all txt files in the folder
+string file_selector(string path) // Find all txt files in the folder
 {
     string found_files_path = "temp_FoundFiles.txt";
-    string command = "find " + path + " -type f -name '*.txt'> " + found_files_path;
+    string command = "find " + path + " -type f -iname \\*.txt -o -type f -iname \\*.h5 > " + found_files_path;
     int systemErr = system(command.c_str());
     if (systemErr == -1)
     {
@@ -137,6 +139,74 @@ int find_position(vector<string> vec_string, string search_string)
         }
     }
     return position;
+}
+
+vector<double> h5_vector(string path, string set_path)
+{
+    string ifn = path;
+    string datasetPath = set_path;
+
+    // Open HDF5 file handle, read only
+    H5File fp(ifn.c_str(), H5F_ACC_RDONLY);
+
+    // access the required dataset by path name
+    DataSet dset = fp.openDataSet(datasetPath.c_str());
+
+    // get the dataspace
+    DataSpace dspace = dset.getSpace();
+
+    // get the dataset type class
+    H5T_class_t type_class = dset.getTypeClass();
+    // According to HDFView, this is a 32-bit floating-point
+
+    // get the size of the dataset
+    hsize_t rank;
+    hsize_t dims[2];
+    rank = dspace.getSimpleExtentDims(dims, NULL); // rank = 1
+    //cout << "Datasize: " << dims[0] << endl;       // this is the correct number of values
+
+    // Define the memory dataspace
+    hsize_t dimsm[1];
+    dimsm[0] = dims[0];
+    DataSpace memspace(1, dimsm);
+
+    // create a vector the same size as the dataset
+    vector<double> data;
+    data.resize(dims[0]);
+    //cout << "Vectsize: " << data.size() << endl;
+    vector<double> new_vector;
+
+    double data_out[65341];
+    for (int i = 0; i < 65341; i++)
+    {
+        data_out[i] = 0;
+    }
+    // pass pointer to the array (or vector) to read function, along with the data type and space.
+    dset.read(data_out, PredType::NATIVE_DOUBLE, memspace, dspace);    // FAILS
+    dset.read(data_out, PredType::NATIVE_DOUBLE, dspace);              // FAILS
+    dset.read(data.data(), PredType::NATIVE_DOUBLE, memspace, dspace); // FAILS
+
+    // close the HDF5 file
+
+    for (int i = 0; i < int(data.size()); i++)
+    {
+        new_vector.push_back(data_out[i]);
+    }
+    fp.close();
+
+    return new_vector;
+}
+
+vector<vector<double>> h5_matrix(string data_path, int segment){
+    string temp_head = "/Waveforms/Channel 1/Channel 1 Seg";
+    string temp_tail = "Data";
+    vector<vector<double>> matrix_h5;
+    for(int i = 1; i < segment+1; ++i){
+        string dataset_path = temp_head + to_string(i) + temp_tail;        
+        vector<double> vec_h5 = h5_vector(data_path, dataset_path);
+        matrix_h5.push_back(vec_h5);
+    }
+    return matrix_h5;
 }
 
 vector<vector<string>> hist_reader(ifstream &thefile) // Read Output Histogram Data
@@ -443,7 +513,8 @@ void histogram_result_writer(string data_path, string data_format_path, vector<s
 vector<string> analyser(vector<vector<double>> input, string filename, double ns) // Analysis
 {
     // Create Directories:
-    string input_path = filename.substr(0, filename.length() - 4); // Remove .txt
+    string extension = splitter(filename,".").back();
+    string input_path = filename.substr(0, filename.length() - extension.size() - 1); // Remove .txt
     string outputname = splitter(input_path, "/").back();
     vector<string> vec_input_path = splitter(input_path, "/");
     string head = string(fs::current_path()) + "/outputs/";

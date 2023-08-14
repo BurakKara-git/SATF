@@ -64,8 +64,8 @@ int main()
         return 0;
     }
 
-    if (option == "hadd" || option == "h") // Merge Root Files
-    { 
+    else if (option == "hadd") // Merge Root Files
+    {
         string option_hadd_input_path;
         string option_hadd_output_path;
         cout << "Input Path: ";
@@ -89,7 +89,7 @@ int main()
 
             if (std::filesystem::exists(data_path))
             {
-                found_name = folder_selector(data_path);
+                found_name = file_selector(data_path);
                 break;
             }
 
@@ -152,32 +152,57 @@ int main()
         while (std::getline(inputfile, filename)) // Loop Through All Files
         {
             count += 1;
-            ifstream *datafile = new ifstream;
-            datafile->open(filename.c_str());
-            if (datafile != nullptr)
-            {
-                cout << "\n" GREEN "Successfully opened the file: " << count << "/" << no_of_data << RESET << endl;
-                cout << YELLOW << "File name: " << RESET << filename << endl;
-                
-                for (int i = 0; i < 24; ++i) // Skip 24 Lines, not containing data
-                {
-                    string line;
-                    getline(*datafile, line);
-                }
 
-                output = reader(*datafile);
-                vector<string> temp_results_and_errors;
+            cout << "\n" GREEN "Successfully opened the file: " << count << "/" << no_of_data << RESET << endl;
+            cout << YELLOW << "File name: " << RESET << filename << endl;
+
+            vector<string> temp_results_and_errors;
+            string extension = splitter(filename, ".").back();
+
+            if (extension == "h5")
+            {
+                int segment = 1024;
+                output = h5_matrix(filename, segment);
+                if (output.size() == 0)
+                {
+                    cout << RED << "ERROR - FILE DOES NOT CONTAIN DATA: " << RESET << filename << endl;
+                    continue;
+                }
                 temp_results_and_errors = analyser(output, filename, ns);
                 results.push_back(temp_results_and_errors[0]);
-                errors.push_back(temp_results_and_errors[1]);                
+                errors.push_back(temp_results_and_errors[1]);
+            }
+
+            else if (extension == "txt")
+            {
+                ifstream *datafile = new ifstream;
+                datafile->open(filename.c_str());
+                if (datafile != nullptr)
+                {
+
+                    for (int i = 0; i < 24; ++i) // Skip 24 Lines, not containing data
+                    {
+                        string line;
+                        getline(*datafile, line);
+                    }
+                    output = reader(*datafile);
+                    temp_results_and_errors = analyser(output, filename, ns);
+                    results.push_back(temp_results_and_errors[0]);
+                    errors.push_back(temp_results_and_errors[1]);
+
+                    if (output.size() == 0)
+                    {
+                        cout << RED << "ERROR - FILE DOES NOT CONTAIN DATA: " << RESET << filename << endl;
+                        continue;
+                    }
+                }
+                delete datafile;
             }
 
             else
             {
                 cout << RED "ERROR: Could not open the file." RESET << endl;
             }
-
-            delete datafile;
         }
 
         histogram_result_writer(data_path, data_format_path, results, errors); // Write Histogram Results
