@@ -161,6 +161,7 @@ int main()
 
             if (extension == "h5")
             {
+                /*
                 int segment = 1024;
                 output = h5_matrix(filename, segment);
                 if (output.size() == 0)
@@ -168,7 +169,9 @@ int main()
                     cout << RED << "ERROR - FILE DOES NOT CONTAIN DATA: " << RESET << filename << endl;
                     continue;
                 }
-                temp_results_and_errors = analyser(output, filename, ns);
+                */
+                
+                temp_results_and_errors = analyser_h5(filename, ns);
                 results.push_back(temp_results_and_errors[0]);
                 errors.push_back(temp_results_and_errors[1]);
             }
@@ -186,7 +189,7 @@ int main()
                         getline(*datafile, line);
                     }
                     output = reader(*datafile);
-                    temp_results_and_errors = analyser(output, filename, ns);
+                    temp_results_and_errors = analyser_matrix(output, filename, ns);
                     results.push_back(temp_results_and_errors[0]);
                     errors.push_back(temp_results_and_errors[1]);
 

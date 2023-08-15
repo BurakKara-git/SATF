@@ -1,4 +1,5 @@
 #include "essential.h"
+#include <bits/stdc++.h>
 #include <H5Cpp.h>
 using namespace H5;
 using namespace std;
@@ -127,7 +128,7 @@ void interface() // Cool - Hazal
          << RESET << endl;
 }
 
-int find_position(vector<string> vec_string, string search_string)
+int find_position(vector<string> vec_string, string search_string) // Find First Occurence of a String in a Vector
 {
     int position = -1;
 
@@ -141,7 +142,18 @@ int find_position(vector<string> vec_string, string search_string)
     return position;
 }
 
-vector<double> h5_vector(string path, string set_path)
+double summation_vec(vector<double> input, int first)
+{
+    int n = input.size();
+    double sum = 0;
+    for (int i = first; i < n; ++i)
+    {
+        sum += input[i];
+    }
+    return sum;
+}
+
+vector<double> h5_reader(string path, string set_path) // Read H5 Data
 {
     string ifn = path;
     string datasetPath = set_path;
@@ -163,7 +175,7 @@ vector<double> h5_vector(string path, string set_path)
     hsize_t rank;
     hsize_t dims[2];
     rank = dspace.getSimpleExtentDims(dims, NULL); // rank = 1
-    //cout << "Datasize: " << dims[0] << endl;       // this is the correct number of values
+    // cout << "Datasize: " << dims[0] << endl;       // this is the correct number of values
 
     // Define the memory dataspace
     hsize_t dimsm[1];
@@ -173,7 +185,7 @@ vector<double> h5_vector(string path, string set_path)
     // create a vector the same size as the dataset
     vector<double> data;
     data.resize(dims[0]);
-    //cout << "Vectsize: " << data.size() << endl;
+    // cout << "Vectsize: " << data.size() << endl;
     vector<double> new_vector;
 
     double data_out[65341];
@@ -195,18 +207,6 @@ vector<double> h5_vector(string path, string set_path)
     fp.close();
 
     return new_vector;
-}
-
-vector<vector<double>> h5_matrix(string data_path, int segment){
-    string temp_head = "/Waveforms/Channel 1/Channel 1 Seg";
-    string temp_tail = "Data";
-    vector<vector<double>> matrix_h5;
-    for(int i = 1; i < segment+1; ++i){
-        string dataset_path = temp_head + to_string(i) + temp_tail;        
-        vector<double> vec_h5 = h5_vector(data_path, dataset_path);
-        matrix_h5.push_back(vec_h5);
-    }
-    return matrix_h5;
 }
 
 vector<vector<string>> hist_reader(ifstream &thefile) // Read Output Histogram Data
@@ -365,7 +365,7 @@ string concatenate_vec(string head_string, vector<string> vector_line, string fi
     return new_line;
 }
 
-void hadd_creator(string hadd_path, string input_path)
+void hadd_creator(string hadd_path, string input_path) // Generate and run hadd command
 {
     string hadd_command = "hadd -f " + hadd_path + " `find " + input_path + " -type f -name '*.root'`";
 
@@ -464,7 +464,7 @@ void full_compare(string hist_path) // filter + compare_hist
     delete hist_file;
 }
 
-void histogram_result_writer(string data_path, string data_format_path, vector<string> results, vector<string> errors)
+void histogram_result_writer(string data_path, string data_format_path, vector<string> results, vector<string> errors) // Print Histogram Results
 {
     string output_hist_path = string(fs::current_path()) + "/outputs/data/";
     string outputname = splitter(data_path, "/").back();
@@ -510,10 +510,10 @@ void histogram_result_writer(string data_path, string data_format_path, vector<s
     }
 }
 
-vector<string> analyser(vector<vector<double>> input, string filename, double ns) // Analysis
+vector<string> analyser_matrix(vector<vector<double>> input, string filename, double ns) // Analysis
 {
     // Create Directories:
-    string extension = splitter(filename,".").back();
+    string extension = splitter(filename, ".").back();
     string input_path = filename.substr(0, filename.length() - extension.size() - 1); // Remove .txt
     string outputname = splitter(input_path, "/").back();
     vector<string> vec_input_path = splitter(input_path, "/");
@@ -549,35 +549,69 @@ vector<string> analyser(vector<vector<double>> input, string filename, double ns
         gErrorIgnoreLevel = kFatal; // Verbose Mode
         double x_max = no_of_datas * ns;
         vector<double> y_axis = input[j];
-        auto it = min_element(y_axis.begin(), y_axis.end());
-        peak_voltages[j] = *it; // Find the peak y value
-        int min_index = distance(y_axis.begin(), it);
-        peak_time.push_back(x_axis[min_index]);
+        double summation = summation_vec(y_axis, 0);
+
         TGraph *graph = new TGraph(no_of_datas, &x_axis[0], &y_axis[0]);
-
-        // Landau Fit:
-        float min_value = *it;
-        float scale = min_value;
-        float mu = min_index * ns; // Location Parameter
-        float sigma = 1 * ns;      // Scale Parameter of Fit
         TF1 *fitFcn = new TF1("fitFcn", "[0]*TMath::Landau(x,[1],[2])", 0, x_max);
-        fitFcn->SetParameters(scale, mu, sigma);
-        fitFcn->SetRange(0, x_max);
-        graph->Fit("fitFcn", "wRQ");
+        if (summation > 0)
+        {
+            auto it = max_element(y_axis.begin(), y_axis.end());
+            peak_voltages[j] = *it; // Find the peak y value
+            int max_index = distance(y_axis.begin(), it);
+            peak_time.push_back(x_axis[max_index]);
 
-        // Calculate Rise-Fall Time:
-        double min_value_fit = fitFcn->GetMinimum();
-        double min_time_fit = fitFcn->GetParameter(1);
-        double r1 = fitFcn->GetX(min_value_fit * 0.2, 0, min_time_fit);
-        double r2 = fitFcn->GetX(min_value_fit * 0.8, 0, min_time_fit);
-        double l1 = fitFcn->GetX(min_value_fit * 0.8, min_time_fit, x_max);
-        double l2 = fitFcn->GetX(min_value_fit * 0.2, min_time_fit, x_max);
-        risetime.push_back(r2 - r1);
-        falltime.push_back(l2 - l1);
+            // Landau Fit:
+            float max_value = *it;
+            float scale = max_value;
+            float mu = max_index * ns; // Location Parameter
+            float sigma = 1 * ns;      // Scale Parameter of Fit
+            fitFcn->SetParameters(scale, mu, sigma);
+            fitFcn->SetRange(0, x_max);
+            graph->Fit("fitFcn", "wRQ");
 
-        // Calculate Integral of the Fall:
-        double epsrel = 1.0e-20;
-        integrals.push_back(-1 * fitFcn->Integral(l1, x_max, epsrel));
+            // Calculate Rise-Fall Time:
+            double max_value_fit = fitFcn->GetMaximum();
+            double max_time_fit = fitFcn->GetParameter(1);
+            double rise_low = fitFcn->GetX(max_value_fit * 0.2, 0, max_time_fit);
+            double rise_high = fitFcn->GetX(max_value_fit * 0.8, 0, max_time_fit);
+            double fall_high = fitFcn->GetX(max_value_fit * 0.8, max_time_fit, x_max);
+            double fall_low = fitFcn->GetX(max_value_fit * 0.2, max_time_fit, x_max);
+            risetime.push_back(rise_high - rise_low);
+            falltime.push_back(fall_low - fall_high);
+
+            // Calculate Integral of the Fall:
+            integrals.push_back(fitFcn->Integral(fall_high, x_max)); // double epsrel = 1.0e-20
+        }
+
+        else
+        {
+            auto it = min_element(y_axis.begin(), y_axis.end());
+            peak_voltages[j] = *it; // Find the peak y value
+            int min_index = distance(y_axis.begin(), it);
+            peak_time.push_back(x_axis[min_index]);
+
+            // Landau Fit:
+            float min_value = *it;
+            float scale = min_value;
+            float mu = min_index * ns; // Location Parameter
+            float sigma = 1 * ns;      // Scale Parameter of Fit
+            fitFcn->SetParameters(scale, mu, sigma);
+            fitFcn->SetRange(0, x_max);
+            graph->Fit("fitFcn", "wRQ");
+
+            // Calculate Rise-Fall Time:
+            double min_value_fit = fitFcn->GetMinimum();
+            double min_time_fit = fitFcn->GetParameter(1);
+            double rise_low = fitFcn->GetX(min_value_fit * 0.2, 0, min_time_fit);
+            double rise_high = fitFcn->GetX(min_value_fit * 0.8, 0, min_time_fit);
+            double fall_high = fitFcn->GetX(min_value_fit * 0.8, min_time_fit, x_max);
+            double fall_low = fitFcn->GetX(min_value_fit * 0.2, min_time_fit, x_max);
+            risetime.push_back(rise_high - rise_low);
+            falltime.push_back(fall_low - fall_high);
+
+            // Calculate Integral of the Fall:
+            integrals.push_back(fitFcn->Integral(fall_high, x_max)); // double epsrel = 1.0e-20
+        }
 
         if (isnan(risetime.back()) || isnan(falltime.back()) || isnan(integrals.back())) // Write Corrupted Data
         {
@@ -612,6 +646,257 @@ vector<string> analyser(vector<vector<double>> input, string filename, double ns
         }
 
         cout << j + 1 << "/" << no_of_datasets << "\r";
+        cout.flush();
+        delete fitFcn;
+        delete graph;
+        gROOT->Reset();
+    }
+
+    // Create Histograms
+    string h_fall_title = date + "_" + outputname + " - Fall Time";
+    string h_rise_title = date + "_" + outputname + " - Rise Time";
+    string h_integral_title = date + "_" + outputname + " - Fall Integral";
+    string h_peak_volt_title = date + "_" + outputname + " - Peak Voltage";
+    string h_peak_time_title = date + "_" + outputname + " - Peak Time";
+
+    string fall_histname = "h_fall_" + date + "_" + outputname;
+    string rise_histname = "h_rise_" + date + "_" + outputname;
+    string integral_histname = "h_integral_" + date + "_" + outputname;
+    string peak_volt_histname = "h_peak_volt_" + date + "_" + outputname;
+    string peak_time_histname = "h_peak_time_" + date + "_" + outputname;
+
+    TH1 *h_fall = new TH1D(fall_histname.c_str(), h_fall_title.c_str(), 10, *min_element(falltime.begin(), falltime.end()), *max_element(falltime.begin(), falltime.end()));
+    TH1 *h_rise = new TH1D(rise_histname.c_str(), h_rise_title.c_str(), 10, *min_element(risetime.begin(), risetime.end()), *max_element(risetime.begin(), risetime.end()));
+    TH1 *h_integral = new TH1D(integral_histname.c_str(), h_integral_title.c_str(), 10, *min_element(integrals.begin(), integrals.end()), *max_element(integrals.begin(), integrals.end()));
+    TH1 *h_peak_volt = new TH1D(peak_volt_histname.c_str(), h_peak_volt_title.c_str(), 10, *min_element(peak_voltages.begin(), peak_voltages.end()), *max_element(peak_voltages.begin(), peak_voltages.end()));
+    TH1 *h_peak_time = new TH1D(peak_time_histname.c_str(), h_peak_time_title.c_str(), 10, *min_element(peak_time.begin(), peak_time.end()), *max_element(peak_time.begin(), peak_time.end()));
+
+    h_fall->SetXTitle("Time(s)");
+    h_rise->SetXTitle("Time(s)");
+    h_integral->SetXTitle("Weber(Vs)");
+    h_peak_volt->SetXTitle("Voltage(V)");
+    h_peak_time->SetXTitle("Time(s)");
+
+    string error_numbers;
+    for (int i = 0; i < no_of_datasets; i++)
+    {
+        if (isnan(risetime[i]) || isnan(falltime[i]) || isnan(integrals[i])) // Pushback Corrupted Segments
+        {
+            error_numbers.append(to_string(i + 1) + ",");
+        }
+
+        else // Fill Histograms
+        {
+            h_fall->Fill(falltime[i]);
+            h_rise->Fill(risetime[i]);
+            h_integral->Fill(integrals[i]);
+            h_peak_volt->Fill(peak_voltages[i]);
+            h_peak_time->Fill(peak_time[i]);
+        }
+    }
+
+    temp_errors = outputpath + "," + error_numbers;
+
+    // Print Results as CSV Format:
+    hist_result.push_back(h_fall->GetEntries());
+    hist_result.push_back(h_fall->GetMean());
+    hist_result.push_back(h_rise->GetMean());
+    hist_result.push_back(h_integral->GetMean());
+    hist_result.push_back(h_peak_volt->GetMean());
+    hist_result.push_back(h_peak_time->GetMean());
+    hist_result.push_back(h_fall->GetStdDev());
+    hist_result.push_back(h_rise->GetStdDev());
+    hist_result.push_back(h_integral->GetStdDev());
+    hist_result.push_back(h_peak_volt->GetStdDev());
+    hist_result.push_back(h_peak_time->GetStdDev());
+
+    name_split = splitter(outputname, "_"); // Split name
+
+    // Merge Histogram Data as a String:
+    string result;
+    for (int k = 0; k < int(hist_result.size()); ++k)
+    {
+        result = result + hist_result[k] + ",";
+    }
+    result.append(date);
+    for (int k = 0; k < int(name_split.size()); ++k)
+    {
+        result.append("," + name_split[k]);
+    }
+    temp_results = result;
+
+    // Write Histograms and Error Plots as a Root File:
+    rootfile->Write();
+
+    // Print Histogram Results as Txt File:
+    string output_txt = outputpath + "result.txt";
+    ofstream Out_txt(output_txt.c_str());
+
+    Out_txt << "Fall-Integral,Peaks(V),Time(s),RiseTime(s),FallTime(s)";
+    for (int i = 0; i < no_of_datasets; i++)
+    {
+        Out_txt << "\n"
+                << integrals[i] << "," << peak_voltages[i] << "," << peak_time[i] << "," << risetime[i] << "," << falltime[i];
+    }
+    Out_txt.close();
+
+    // Free Memory:
+    delete h_fall;
+    delete h_rise;
+    delete h_integral;
+    delete h_peak_volt;
+    delete h_peak_time;
+    rootfile->Close();
+
+    results_and_errors.push_back(temp_results);
+    results_and_errors.push_back(temp_errors);
+
+    cout << GREEN << "Output is saved to the directory: " << RESET << outputpath << endl;
+    return results_and_errors;
+}
+
+vector<string> analyser_h5(string filename, double ns) // Analysis for H5 Files
+{
+    string extension = splitter(filename, ".").back();
+    string input_path = filename.substr(0, filename.length() - extension.size() - 1); // Remove .txt
+    string outputname = splitter(input_path, "/").back();
+    vector<string> vec_input_path = splitter(input_path, "/");
+    string head = string(fs::current_path()) + "/outputs/";
+    string outputpath = concatenate_vec(head, vec_input_path, "data", "", "/");
+    string date = concatenate_vec("", vec_input_path, "data", outputname, "/");
+    fs::create_directories(outputpath);
+
+    // Initialize:
+    int segment = 1024;
+    vector<string> results_and_errors;
+    string temp_results;
+    string temp_errors;
+    string rootname = outputpath + "result.root";
+    TFile *rootfile = new TFile(rootname.c_str(), "RECREATE");
+    int no_of_datasets = segment;
+    vector<double> peak_voltages(no_of_datasets);
+    vector<double> peak_time;
+    vector<double> integrals;
+    vector<double> risetime;
+    vector<double> falltime;
+    vector<double> hist_result;
+    vector<string> name_split;
+
+    string temp_head = "/Waveforms/Channel 1/Channel 1 Seg";
+    string temp_tail = "Data";
+
+    for (int i = 0; i < segment; ++i)
+    {
+        string dataset_path = temp_head + to_string(i + 1) + temp_tail;
+        vector<double> input = h5_reader(filename, dataset_path);
+        double summation = summation_vec(input, 0);
+        int no_of_datas = input.size();
+        vector<double> x_axis(no_of_datas); // time
+
+        for (int i = 0; i < no_of_datas; i++) // FORUN DIŞINDA YAP
+        {
+            x_axis[i] = i * ns; // Sampling time
+        }
+
+        gErrorIgnoreLevel = kFatal; // Verbose Mode
+        double x_max = no_of_datas * ns;
+        vector<double> y_axis = input;
+
+        TGraph *graph = new TGraph(no_of_datas, &x_axis[0], &y_axis[0]);
+        TF1 *fitFcn = new TF1("fitFcn", "[0]*TMath::Landau(x,[1],[2])", 0, x_max);
+        if (summation > 0)
+        {
+            auto it = max_element(y_axis.begin(), y_axis.end());
+            peak_voltages[i] = *it; // Find the peak y value
+            int max_index = distance(y_axis.begin(), it);
+            peak_time.push_back(x_axis[max_index]);
+
+            // Landau Fit:
+            float max_value = *it;
+            float scale = max_value;
+            float mu = max_index * ns; // Location Parameter
+            float sigma = 1 * ns;      // Scale Parameter of Fit
+            fitFcn->SetParameters(scale, mu, sigma);
+            fitFcn->SetRange(0, x_max);
+            graph->Fit("fitFcn", "wRQ");
+
+            // Calculate Rise-Fall Time:
+            double max_value_fit = fitFcn->GetMaximum();
+            double max_time_fit = fitFcn->GetParameter(1);
+            double rise_low = fitFcn->GetX(max_value_fit * 0.2, 0, max_time_fit);
+            double rise_high = fitFcn->GetX(max_value_fit * 0.8, 0, max_time_fit);
+            double fall_high = fitFcn->GetX(max_value_fit * 0.8, max_time_fit, x_max);
+            double fall_low = fitFcn->GetX(max_value_fit * 0.2, max_time_fit, x_max);
+            risetime.push_back(rise_high - rise_low);
+            falltime.push_back(fall_low - fall_high);
+
+            // Calculate Integral of the Fall:
+            integrals.push_back(fitFcn->Integral(fall_high, x_max)); // double epsrel = 1.0e-20
+        }
+
+        else
+        {
+            auto it = min_element(y_axis.begin(), y_axis.end());
+            peak_voltages[i] = *it; // Find the peak y value
+            int min_index = distance(y_axis.begin(), it);
+            peak_time.push_back(x_axis[min_index]);
+
+            // Landau Fit:
+            float min_value = *it;
+            float scale = min_value;
+            float mu = min_index * ns; // Location Parameter
+            float sigma = 1 * ns;      // Scale Parameter of Fit
+            fitFcn->SetParameters(scale, mu, sigma);
+            fitFcn->SetRange(0, x_max);
+            graph->Fit("fitFcn", "wRQ");
+
+            // Calculate Rise-Fall Time:
+            double min_value_fit = fitFcn->GetMinimum();
+            double min_time_fit = fitFcn->GetParameter(1);
+            double rise_low = fitFcn->GetX(min_value_fit * 0.2, 0, min_time_fit);
+            double rise_high = fitFcn->GetX(min_value_fit * 0.8, 0, min_time_fit);
+            double fall_high = fitFcn->GetX(min_value_fit * 0.8, min_time_fit, x_max);
+            double fall_low = fitFcn->GetX(min_value_fit * 0.2, min_time_fit, x_max);
+            risetime.push_back(rise_high - rise_low);
+            falltime.push_back(fall_low - fall_high);
+
+            // Calculate Integral of the Fall:
+            integrals.push_back(fitFcn->Integral(fall_high, x_max)); // double epsrel = 1.0e-20
+        }
+
+        if (isnan(risetime.back()) || isnan(falltime.back()) || isnan(integrals.back())) // Write Corrupted Data
+        {
+            cout << RED << "ERROR - NAN VALUE: " << RESET << outputpath << ", Segment: " << i + 1 << endl;
+
+            // Graph Design
+            TCanvas *c1 = new TCanvas("c1", "c1", 200, 10, 600, 400);
+            c1->SetGrid();
+            c1->Draw();
+            string error_title = date + " " + outputname + " - Voltage vs. Time Segment: " + to_string(i + 1);
+            graph->SetTitle(error_title.c_str());
+            graph->GetXaxis()->SetTitle("Time (s)");
+            graph->GetYaxis()->SetTitle("Voltage (V)");
+            graph->SetMarkerStyle(8);
+            graph->SetMarkerColor(kBlue);
+            graph->SetMarkerSize(0.7);
+            graph->SetLineColor(kBlue);
+            graph->SetLineWidth(3);
+            graph->Draw("A*");
+            gStyle->SetOptFit(1);
+
+            // Save Graph as Root and PDF File:
+            string root_path = outputpath + "/errors/root";
+            string pdf_path = outputpath + "/errors/pdf";
+            fs::create_directories(root_path.c_str());
+            fs::create_directories(pdf_path.c_str());
+            string output_root = root_path + "/graph_" + to_string(i + 1) + ".root";
+            string output_pdf = pdf_path + "/graph_" + to_string(i + 1) + ".pdf";
+            c1->SaveAs(output_pdf.c_str());
+            c1->SaveAs(output_root.c_str());
+            delete c1;
+        }
+
+        cout << i + 1 << "/" << no_of_datasets << "\r";
         cout.flush();
         delete fitFcn;
         delete graph;
