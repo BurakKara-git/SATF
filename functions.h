@@ -153,62 +153,6 @@ double summation_vec(vector<double> input, int first)
     return sum;
 }
 
-vector<double> h5_reader(string path, string set_path) // Read H5 Data
-{
-    string ifn = path;
-    string datasetPath = set_path;
-
-    // Open HDF5 file handle, read only
-    H5File fp(ifn.c_str(), H5F_ACC_RDONLY);
-
-    // access the required dataset by path name
-    DataSet dset = fp.openDataSet(datasetPath.c_str());
-
-    // get the dataspace
-    DataSpace dspace = dset.getSpace();
-
-    // get the dataset type class
-    H5T_class_t type_class = dset.getTypeClass();
-    // According to HDFView, this is a 32-bit floating-point
-
-    // get the size of the dataset
-    hsize_t rank;
-    hsize_t dims[2];
-    rank = dspace.getSimpleExtentDims(dims, NULL); // rank = 1
-    // cout << "Datasize: " << dims[0] << endl;       // this is the correct number of values
-
-    // Define the memory dataspace
-    hsize_t dimsm[1];
-    dimsm[0] = dims[0];
-    DataSpace memspace(1, dimsm);
-
-    // create a vector the same size as the dataset
-    vector<double> data;
-    data.resize(dims[0]);
-    // cout << "Vectsize: " << data.size() << endl;
-    vector<double> new_vector;
-
-    double data_out[65341];
-    for (int i = 0; i < 65341; i++)
-    {
-        data_out[i] = 0;
-    }
-    // pass pointer to the array (or vector) to read function, along with the data type and space.
-    dset.read(data_out, PredType::NATIVE_DOUBLE, memspace, dspace);    // FAILS
-    dset.read(data_out, PredType::NATIVE_DOUBLE, dspace);              // FAILS
-    dset.read(data.data(), PredType::NATIVE_DOUBLE, memspace, dspace); // FAILS
-
-    // close the HDF5 file
-
-    for (int i = 0; i < int(data.size()); i++)
-    {
-        new_vector.push_back(data_out[i]);
-    }
-    fp.close();
-
-    return new_vector;
-}
-
 vector<vector<string>> hist_reader(ifstream &thefile) // Read Output Histogram Data
 {
     string line;
@@ -757,6 +701,7 @@ vector<string> analyser_matrix(vector<vector<double>> input, string filename, do
 
 vector<string> analyser_h5(string filename, double ns) // Analysis for H5 Files
 {
+    // Create Directories:
     string extension = splitter(filename, ".").back();
     string input_path = filename.substr(0, filename.length() - extension.size() - 1); // Remove .txt
     string outputname = splitter(input_path, "/").back();
@@ -782,32 +727,53 @@ vector<string> analyser_h5(string filename, double ns) // Analysis for H5 Files
     vector<double> hist_result;
     vector<string> name_split;
 
-    string temp_head = "/Waveforms/Channel 1/Channel 1 Seg";
-    string temp_tail = "Data";
+    // Dataset Path:
+    string ds_name_head = "/Waveforms/Channel 1/Channel 1 Seg";
+    string ds_name_tail = "Data";
+
+    // Open H5 File:
+    H5File fp(filename.c_str(), H5F_ACC_RDONLY);
 
     for (int i = 0; i < segment; ++i)
     {
-        string dataset_path = temp_head + to_string(i + 1) + temp_tail;
-        vector<double> input = h5_reader(filename, dataset_path);
-        double summation = summation_vec(input, 0);
-        int no_of_datas = input.size();
-        vector<double> x_axis(no_of_datas); // time
+        // Open Dataset:
+        string datasetPath = ds_name_head + to_string(i + 1) + ds_name_tail;
+        DataSet dset = fp.openDataSet(datasetPath.c_str());
 
-        for (int i = 0; i < no_of_datas; i++) // FORUN DIŞINDA YAP
+        // Define the Memory Dataspace:
+        DataSpace dspace = dset.getSpace();
+        hsize_t dims[2];
+        dspace.getSimpleExtentDims(dims, NULL);
+        hsize_t dimsm[1];
+        dimsm[0] = dims[0];
+        DataSpace memspace(1, dimsm);
+
+        // Create a Vector with Same Size:
+        vector<double> y_axis;
+        y_axis.resize(dims[0]);
+        dset.read(y_axis.data(), PredType::NATIVE_DOUBLE, memspace, dspace);
+
+        // Check if Peak is at Negative or Positive:
+        double summation = summation_vec(y_axis, 0);
+
+        // Create X-Axis:
+        int no_of_datas = y_axis.size();
+        vector<double> x_axis(no_of_datas); // time
+        for (int i = 0; i < no_of_datas; i++)
         {
             x_axis[i] = i * ns; // Sampling time
         }
 
-        gErrorIgnoreLevel = kFatal; // Verbose Mode
+        // Initilize Graph and Fit Function:        
         double x_max = no_of_datas * ns;
-        vector<double> y_axis = input;
-
         TGraph *graph = new TGraph(no_of_datas, &x_axis[0], &y_axis[0]);
         TF1 *fitFcn = new TF1("fitFcn", "[0]*TMath::Landau(x,[1],[2])", 0, x_max);
-        if (summation > 0)
+
+        if (summation > 0) // Peak at Positive
         {
+            // Find Peak Value:
             auto it = max_element(y_axis.begin(), y_axis.end());
-            peak_voltages[i] = *it; // Find the peak y value
+            peak_voltages[i] = *it;
             int max_index = distance(y_axis.begin(), it);
             peak_time.push_back(x_axis[max_index]);
 
@@ -834,10 +800,11 @@ vector<string> analyser_h5(string filename, double ns) // Analysis for H5 Files
             integrals.push_back(fitFcn->Integral(fall_high, x_max)); // double epsrel = 1.0e-20
         }
 
-        else
+        else // Peak at Negative
         {
+            // Find Peak Value:
             auto it = min_element(y_axis.begin(), y_axis.end());
-            peak_voltages[i] = *it; // Find the peak y value
+            peak_voltages[i] = *it;
             int min_index = distance(y_axis.begin(), it);
             peak_time.push_back(x_axis[min_index]);
 
@@ -998,10 +965,11 @@ vector<string> analyser_h5(string filename, double ns) // Analysis for H5 Files
     delete h_peak_volt;
     delete h_peak_time;
     rootfile->Close();
+    fp.close();
 
+    // Pushback Results and Errors
     results_and_errors.push_back(temp_results);
     results_and_errors.push_back(temp_errors);
-
     cout << GREEN << "Output is saved to the directory: " << RESET << outputpath << endl;
     return results_and_errors;
 }

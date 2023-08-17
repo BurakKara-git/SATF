@@ -160,17 +160,7 @@ int main()
             string extension = splitter(filename, ".").back();
 
             if (extension == "h5")
-            {
-                /*
-                int segment = 1024;
-                output = h5_matrix(filename, segment);
-                if (output.size() == 0)
-                {
-                    cout << RED << "ERROR - FILE DOES NOT CONTAIN DATA: " << RESET << filename << endl;
-                    continue;
-                }
-                */
-                
+            {                
                 temp_results_and_errors = analyser_h5(filename, ns);
                 results.push_back(temp_results_and_errors[0]);
                 errors.push_back(temp_results_and_errors[1]);
