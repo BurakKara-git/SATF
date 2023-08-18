@@ -28,7 +28,7 @@ int main()
         string option_path;
         string option_type;
 
-        cout << "'standart' or 'custom': ";
+        cout << "'standard' or 'custom': ";
         getline(cin, option_type);
 
         while (true) // Ask For Histogram Path
@@ -67,7 +67,6 @@ int main()
         if (option_type == "custom" || option_type == "c")
         {
             custom_compare(option_path);
-            
         }
         else
         {

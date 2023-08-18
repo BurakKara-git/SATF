@@ -480,7 +480,7 @@ void custom_compare(string hist_path) // Customized Compare
         cout << "Divide Entries By: ";
         getline(cin, option_division);
 
-        // Create Directories and Initialize Root File:        
+        // Create Directories and Initialize Root File:
         string name_filter = "filtered";
         for (int i = 0; i < int(filters.size()); i++)
         {
@@ -944,7 +944,7 @@ vector<string> analyser_h5(string filename, double ns) // Analysis for H5 Files
             x_axis[i] = i * ns; // Sampling time
         }
 
-        // Initilize Graph and Fit Function:
+        // Initialize Graph and Fit Function:
         double x_max = no_of_datas * ns;
         TGraph *graph = new TGraph(no_of_datas, &x_axis[0], &y_axis[0]);
         TF1 *fitFcn = new TF1("fitFcn", "[0]*TMath::Landau(x,[1],[2])", 0, x_max);
