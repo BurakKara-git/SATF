@@ -1,6 +1,7 @@
 #include "essential.h"
 #include <bits/stdc++.h>
 #include <H5Cpp.h>
+#include <algorithm>
 using namespace H5;
 using namespace std;
 namespace fs = std::filesystem;
@@ -156,40 +157,27 @@ double summation_vec(vector<double> input, int first)
 vector<vector<string>> hist_reader(ifstream &thefile) // Read Output Histogram Data
 {
     string line;
-    int n_rows = 0;
-    int n_columns = 0;
     vector<vector<string>> matrix;
 
     while (getline(thefile, line))
     {
-        n_rows += 1;
         vector<string> rows;
         rows = splitter(line, ",");
-        n_columns = int(rows.size());
         matrix.push_back(rows);
     }
 
-    vector<vector<string>> transpose(n_columns, vector<string>(n_rows));
-    for (int i = 0; i < n_columns; i++)
-    {
-        for (int j = 0; j < n_rows; j++)
-        {
-            transpose[i][j] = matrix[j][i];
-        }
-    }
-
-    return transpose;
+    return matrix;
 }
 
-void compare_hist(vector<vector<double>> data, string filter1, string filter2, string hist_type, string output_path, string bin_division) // Create Histograms for Certain Combinations
+void compare_hist(vector<vector<double>> data, vector<string> filters, string hist_type, string output_path, string bin_division) // Create Histograms for Certain Combinations
 {
-    vector<string> temp_source_type = splitter(filter1, ",");
-    vector<string> temp_scintillator_type = splitter(filter2, ",");
-    string head_source = temp_source_type[0];
-    string tail_source = temp_source_type[1];
-    string head_scintillator = temp_scintillator_type[0];
-    string tail_scintillator = temp_scintillator_type[1];
-    string histo_name = tail_source + "_" + tail_scintillator + "-" + hist_type;
+    string histo_name = hist_type;
+
+    for (int i = 0; i < int(filters.size()); i++)
+    {
+        string filtername = splitter(filters[i], ":")[1];
+        histo_name.append("_" + filtername);
+    }
     vector<double> temp_data;
     vector<double> temp_std;
 
@@ -243,10 +231,41 @@ void compare_hist(vector<vector<double>> data, string filter1, string filter2, s
     delete c_hist;
 }
 
-vector<int> filter(vector<vector<string>> data, string source_type, string scintillator_type) // Filter Combinations
+vector<int> filter(vector<vector<string>> data, string filter) // Filter for a Given Type and Value
 {
-    vector<string> temp_source_type = splitter(source_type, ",");
-    vector<string> temp_scintillator_type = splitter(scintillator_type, ",");
+    vector<int> positions;
+    string filter_type = splitter(filter, ":")[0];
+    string filter_value = splitter(filter, ":")[1];
+    int filter_type_position = 0;
+
+    for (int i = 0; i < int(data[0].size()); ++i)
+    {
+        if (data[0][i] == filter_type)
+        {
+            filter_type_position = i;
+        }
+    }
+
+    if (filter_type_position >= int(data[1].size()))
+    {
+        cout << RED << "ERROR - FIRST ROW'S SIZE IS LARGER THAN DATA ROWS" << RESET << endl;
+    }
+
+    for (int i = 1; i < int(data.size()); ++i)
+    {
+        if (data[i][filter_type_position] == filter_value)
+        {
+            positions.push_back(i);
+        }
+    }
+
+    return positions;
+}
+
+vector<int> filter_ss(vector<vector<string>> data, string source_type, string scintillator_type) // Filter for Source-Scintillator
+{
+    vector<string> temp_source_type = splitter(source_type, ":");
+    vector<string> temp_scintillator_type = splitter(scintillator_type, ":");
     string head_source = temp_source_type[0];
     string tail_source = temp_source_type[1];
     string head_scintillator = temp_scintillator_type[0];
@@ -255,23 +274,22 @@ vector<int> filter(vector<vector<string>> data, string source_type, string scint
     int source_filter_position = 0;
     int scintillator_filter_position = 0;
     vector<int> data_positions;
-
-    for (int i = 0; i < int(data.size()); ++i)
+    for (int i = 0; i < int(data[0].size()); ++i)
     {
-        if (data[i][0] == head_source)
+        if (data[0][i] == head_source)
         {
-            source_filter_position = i;
+            source_filter_position = i; // column
         }
 
-        if (data[i][0] == head_scintillator)
+        if (data[0][i] == head_scintillator)
         {
-            scintillator_filter_position = i;
+            scintillator_filter_position = i; // column
         }
     }
 
-    for (int i = 1; i < int(data[source_filter_position].size()); ++i)
+    for (int i = 1; i < int(data.size()); ++i)
     {
-        if (data[source_filter_position][i] == tail_source && data[scintillator_filter_position][i] == tail_scintillator)
+        if (data[i][source_filter_position] == tail_source && data[i][scintillator_filter_position] == tail_scintillator)
         {
             data_positions.push_back(i);
         }
@@ -338,7 +356,166 @@ void hadd_creator(string hadd_path, string input_path) // Generate and run hadd 
     }
 }
 
-void full_compare(string hist_path) // filter + compare_hist
+vector<int> filter_intersector(vector<int> first, vector<int> second) // Intersection of Two Vectors
+{
+    int n1 = first.size();
+    int n2 = second.size();
+    vector<int> v(n1 + n2);
+    vector<int>::iterator it;
+    sort(first.begin(), first.end());
+    sort(second.begin(), second.end());
+
+    it = set_intersection(first.begin(), first.end(), second.begin(), second.end(), v.begin());
+    v.resize(it - v.begin());
+    return v;
+}
+
+void custom_compare(string hist_path) // Customized Compare
+{
+    gErrorIgnoreLevel = kFatal; // Verbose Mode
+
+    // Find Date of the Source File:
+    vector<string> temp_hist_data_source = splitter(hist_path, "/");
+    temp_hist_data_source = splitter(temp_hist_data_source.back(), "_");
+    string hist_data_source = temp_hist_data_source[0];
+
+    // Read the Histogram Result File:
+    vector<vector<string>> hist_output;
+    ifstream *hist_file = new ifstream;
+    hist_file->open(hist_path.c_str());
+    hist_output = hist_reader(*hist_file);
+
+    // Initialize:
+    vector<string> filters;
+    string option_division;
+    vector<int> filtered_positions;
+
+    // Ask For Filters:
+    cout << "To Exit: 'q' " << endl;
+    int count = 0;
+    while (true)
+    {
+        string option_filter;
+        vector<int> temp_filtered_positions;
+        cout << "FilterType:FilterValue = ";
+        getline(cin, option_filter);
+
+        if (option_filter == "q")
+        {
+            return;
+        }
+
+        else if (option_filter == "")
+        {
+            break;
+        }
+
+        else
+        {
+            if (count == 0)
+            {
+                filtered_positions = filter(hist_output, option_filter);
+
+                if (filtered_positions.size() == 0)
+                {
+                    cout << RED << "ERROR - NOT A VALID COMBINATION" << RESET << endl;
+                    filtered_positions.clear();
+                    filters.clear();
+                    count = 0;
+                }
+
+                else
+                {
+                    filters.push_back(option_filter);
+                    count += 1;
+                    cout << GREEN << filtered_positions.size() << " Entries Found" << RESET << endl;
+                    cout << "   To Compare Press ENTER" << endl;
+                }
+            }
+
+            else
+            {
+                temp_filtered_positions = filter(hist_output, option_filter);
+                if (temp_filtered_positions.size() == 0)
+                {
+                    cout << RED << "ERROR - NO COMBINATIONS FOR: " << RESET;
+                    for (int i = 0; i < int(filters.size()); i++)
+                    {
+                        cout << filters[i] << ",";
+                    }
+                    cout << option_filter << "\n";
+
+                    // Clear
+                    count = 0;
+                    filtered_positions.clear();
+                    filters.clear();
+                    temp_filtered_positions.clear();
+                }
+
+                else
+                {
+                    filtered_positions = filter_intersector(filtered_positions, temp_filtered_positions);
+                    filters.push_back(option_filter);
+                    cout << GREEN << filtered_positions.size() << " Entries Found" << RESET << endl;
+                    cout << "   To Compare Press ENTER" << endl;
+                }
+            }
+        }
+    }
+
+    if (filtered_positions.size() == 0)
+    {
+        return;
+    }
+
+    else
+    {
+        cout << GREEN << filtered_positions.size() << " Entries for Combination: " << RESET;
+        for (int i = 0; i < int(filters.size()); i++)
+        {
+            cout << filters[i] << ",";
+        }
+        cout << "\n";
+
+        cout << "Divide Entries By: ";
+        getline(cin, option_division);
+
+        // Create Directories and Initialize Root File:        
+        string name_filter = "filtered";
+        for (int i = 0; i < int(filters.size()); i++)
+        {
+            string filtername = splitter(filters[i], ":")[1];
+            name_filter.append("_" + filtername);
+        }
+        string compare_root_path = string(fs::current_path()) + "/outputs/compare/" + hist_data_source + "/" + name_filter + "/";
+        string compare_root_name = compare_root_path + "compare_hist.root";
+        fs::create_directories(compare_root_path.c_str());
+        TFile *hist_root_file = new TFile(compare_root_name.c_str(), "RECREATE");
+
+        for (int t = 1; t < 6; ++t) // Generate 5 Histograms
+        {
+            vector<vector<double>> hist_values;
+            for (int k = 0; k < int(filtered_positions.size()); ++k)
+            {
+                int row = filtered_positions[k];
+                vector<double> temp_hist_values;
+                double value = stof(hist_output[row][t]);
+                double error = stof(hist_output[row][t + 5]);
+                temp_hist_values.push_back(value);
+                temp_hist_values.push_back(error);
+                hist_values.push_back(temp_hist_values);
+            }
+            string hist_type = hist_output[0][t];
+            compare_hist(hist_values, filters, hist_type, compare_root_path, option_division);
+        }
+        hist_root_file->Write();
+        delete hist_root_file;
+        cout << GREEN << "RESULT SAVED TO THE DIRECTORY: " << RESET << compare_root_path << endl;
+    }
+    delete hist_file;
+}
+
+void standard_compare(string hist_path) // filter + compare_hist
 {
     gErrorIgnoreLevel = kFatal; // Verbose Mode
 
@@ -355,7 +532,7 @@ void full_compare(string hist_path) // filter + compare_hist
 
     // Generate Result For All Sources and Scintillators:
     vector<string> option_source = {"Ba133", "Cs137", "Co57"};
-    vector<string> option_scintillator = {"EJ276", "CR001", "CR002", "CR003"};
+    vector<string> option_scintillator = {"EJ276", "CR001", "CR002", "CR003", "EJ200"};
 
     string option_division;
     cout << "Divide Entries By: ";
@@ -365,9 +542,9 @@ void full_compare(string hist_path) // filter + compare_hist
     {
         for (int iscintillator = 0; iscintillator < int(option_scintillator.size()); ++iscintillator)
         {
-            string filter1 = "Source," + option_source[isource];
-            string filter2 = "Scintillator," + option_scintillator[iscintillator];
-            vector<int> positions = filter(hist_output, filter1, filter2); // Find Positions of Valid Combinations
+            string filter1 = "Source:" + option_source[isource];
+            string filter2 = "Scintillator:" + option_scintillator[iscintillator];
+            vector<int> positions = filter_ss(hist_output, filter1, filter2); // Find Positions of Valid Combinations
 
             if (positions.size() == 0)
             {
@@ -387,17 +564,17 @@ void full_compare(string hist_path) // filter + compare_hist
                     vector<vector<double>> hist_values;
                     for (int k = 0; k < int(positions.size()); ++k)
                     {
-                        int column = positions[k];
+                        int row = positions[k];
                         vector<double> temp_hist_values;
-                        double value = stof(hist_output[t][column]);
-                        double error = stof(hist_output[t + 5][column]);
+                        double value = stof(hist_output[row][t]);
+                        double error = stof(hist_output[row][t + 5]);
                         temp_hist_values.push_back(value);
                         temp_hist_values.push_back(error);
                         hist_values.push_back(temp_hist_values);
                     }
-                    string filter3 = hist_output[t][0];
-
-                    compare_hist(hist_values, filter1, filter2, filter3, compare_root_path, option_division);
+                    string hist_type = hist_output[0][t];
+                    vector<string> filters = {filter1, filter2};
+                    compare_hist(hist_values, filters, hist_type, compare_root_path, option_division);
                 }
                 hist_root_file->Write();
                 delete hist_root_file;
@@ -454,7 +631,7 @@ void histogram_result_writer(string data_path, string data_format_path, vector<s
     }
 }
 
-vector<string> analyser_matrix(vector<vector<double>> input, string filename, double ns) // Analysis
+vector<string> analyser_matrix(vector<vector<double>> input, string filename, double ns) // Analysis for Matrix
 {
     // Create Directories:
     string extension = splitter(filename, ".").back();
@@ -464,6 +641,7 @@ vector<string> analyser_matrix(vector<vector<double>> input, string filename, do
     string head = string(fs::current_path()) + "/outputs/";
     string outputpath = concatenate_vec(head, vec_input_path, "data", "", "/");
     string date = concatenate_vec("", vec_input_path, "data", outputname, "/");
+    date = date.substr(0, date.size() - 1);
     fs::create_directories(outputpath);
 
     // Initialize:
@@ -709,6 +887,8 @@ vector<string> analyser_h5(string filename, double ns) // Analysis for H5 Files
     string head = string(fs::current_path()) + "/outputs/";
     string outputpath = concatenate_vec(head, vec_input_path, "data", "", "/");
     string date = concatenate_vec("", vec_input_path, "data", outputname, "/");
+    date = date.substr(0, date.size() - 1);
+
     fs::create_directories(outputpath);
 
     // Initialize:
@@ -764,7 +944,7 @@ vector<string> analyser_h5(string filename, double ns) // Analysis for H5 Files
             x_axis[i] = i * ns; // Sampling time
         }
 
-        // Initilize Graph and Fit Function:        
+        // Initilize Graph and Fit Function:
         double x_max = no_of_datas * ns;
         TGraph *graph = new TGraph(no_of_datas, &x_axis[0], &y_axis[0]);
         TF1 *fitFcn = new TF1("fitFcn", "[0]*TMath::Landau(x,[1],[2])", 0, x_max);

@@ -26,6 +26,10 @@ int main()
     if (option == "compare" || option == "c") // Compare an existing histogram result file
     {
         string option_path;
+        string option_type;
+
+        cout << "'standart' or 'custom': ";
+        getline(cin, option_type);
 
         while (true) // Ask For Histogram Path
         {
@@ -60,17 +64,25 @@ int main()
             }
         }
 
-        full_compare(option_path);
+        if (option_type == "custom" || option_type == "c")
+        {
+            custom_compare(option_path);
+            
+        }
+        else
+        {
+            standard_compare(option_path);
+        }
         return 0;
     }
 
-    else if (option == "hadd") // Merge Root Files
+    else if (option == "hadd" || option == "h") // Merge Root Files
     {
         string option_hadd_input_path;
         string option_hadd_output_path;
         cout << "Input Path: ";
         getline(cin, option_hadd_input_path);
-        option_hadd_output_path = option_hadd_input_path + ".root";
+        option_hadd_output_path = option_hadd_input_path + "result.root";
         hadd_creator(option_hadd_output_path, option_hadd_input_path);
         return 0;
     }
@@ -160,7 +172,7 @@ int main()
             string extension = splitter(filename, ".").back();
 
             if (extension == "h5")
-            {                
+            {
                 temp_results_and_errors = analyser_h5(filename, ns);
                 results.push_back(temp_results_and_errors[0]);
                 errors.push_back(temp_results_and_errors[1]);
