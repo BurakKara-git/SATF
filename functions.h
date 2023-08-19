@@ -370,7 +370,39 @@ vector<int> filter_intersector(vector<int> first, vector<int> second) // Interse
     return v;
 }
 
-void custom_compare(string hist_path) // Customized Compare
+vector<string> compare_available_options(vector<vector<string>> data, int column, vector<int> positions)
+{
+    vector<string> v;
+    int n;
+
+    if (positions.size() == 0)
+    {
+        n = int(data.size());
+        for (int i = 1; i < n; i++)
+        {
+            v.push_back(data[i][column]);
+        }
+    }
+
+    else
+    {
+        n = int(positions.size());
+        for (int i = 0; i < n; i++)
+        {
+            int row = positions[i];
+            v.push_back(data[row][column]);
+        }
+    }
+
+    sort(v.begin(), v.end());
+    vector<string>::iterator it;
+    it = unique(v.begin(), v.end());
+    v.resize(distance(v.begin(), it));
+
+    return v;
+}
+
+void custom_compare(string hist_path)
 {
     gErrorIgnoreLevel = kFatal; // Verbose Mode
 
@@ -389,77 +421,65 @@ void custom_compare(string hist_path) // Customized Compare
     vector<string> filters;
     string option_division;
     vector<int> filtered_positions;
+    int type_size = hist_output[0].size();
 
-    // Ask For Filters:
-    cout << "To Exit: 'q' " << endl;
+    // Ask For Filter Values:
     int count = 0;
-    while (true)
+    for (int i = 11; i < type_size - 1; i++)
     {
-        string option_filter;
-        vector<int> temp_filtered_positions;
-        cout << "FilterType:FilterValue = ";
-        getline(cin, option_filter);
+        string option_type;
+        vector<string> availables = compare_available_options(hist_output, i, filtered_positions);
 
-        if (option_filter == "q")
+        cout << YELLOW << "Options: " << RESET;
+        for (int j = 0; j < int(availables.size()); j++)
         {
-            return;
+            cout << availables[j] << ", ";
+        }
+        cout << "\n";
+
+        cout << YELLOW << hist_output[0][i] << ": " << RESET;
+        getline(cin, option_type);
+
+        if (option_type == "")
+        {
+            continue;
         }
 
-        else if (option_filter == "")
+        if (option_type == "c")
         {
+            break;
+        }
+
+        if (count == 0)
+        {
+            count += 1;
+            filters.push_back(hist_output[0][i] + ":" + option_type);
+            filtered_positions = filter(hist_output, filters.back());
+        }
+
+        else
+        {
+
+            filters.push_back(hist_output[0][i] + ":" + option_type);
+            vector<int> temp_filtered_positions = filter(hist_output, filters.back());
+            filtered_positions = filter_intersector(filtered_positions, temp_filtered_positions);
+        }
+
+        if (filtered_positions.size() == 0)
+        {
+            cout << ORANGE << "No Combinations For: " << RESET;
+            for (int i = 0; i < int(filters.size()); i++)
+            {
+                cout << filters[i] << ",";
+            }
+            cout << "\n";
             break;
         }
 
         else
         {
-            if (count == 0)
-            {
-                filtered_positions = filter(hist_output, option_filter);
-
-                if (filtered_positions.size() == 0)
-                {
-                    cout << RED << "ERROR - NOT A VALID COMBINATION" << RESET << endl;
-                    filtered_positions.clear();
-                    filters.clear();
-                    count = 0;
-                }
-
-                else
-                {
-                    filters.push_back(option_filter);
-                    count += 1;
-                    cout << GREEN << filtered_positions.size() << " Entries Found" << RESET << endl;
-                    cout << "   To Compare Press ENTER" << endl;
-                }
-            }
-
-            else
-            {
-                temp_filtered_positions = filter(hist_output, option_filter);
-                if (temp_filtered_positions.size() == 0)
-                {
-                    cout << RED << "ERROR - NO COMBINATIONS FOR: " << RESET;
-                    for (int i = 0; i < int(filters.size()); i++)
-                    {
-                        cout << filters[i] << ",";
-                    }
-                    cout << option_filter << "\n";
-
-                    // Clear
-                    count = 0;
-                    filtered_positions.clear();
-                    filters.clear();
-                    temp_filtered_positions.clear();
-                }
-
-                else
-                {
-                    filtered_positions = filter_intersector(filtered_positions, temp_filtered_positions);
-                    filters.push_back(option_filter);
-                    cout << GREEN << filtered_positions.size() << " Entries Found" << RESET << endl;
-                    cout << "   To Compare Press ENTER" << endl;
-                }
-            }
+            cout << GREEN << filtered_positions.size() << " Entries Found" << RESET << endl;
+            cout << "   To Compare Press 'c'" << endl;
         }
     }
 
@@ -512,6 +532,7 @@ void custom_compare(string hist_path) // Customized Compare
         delete hist_root_file;
         cout << GREEN << "RESULT SAVED TO THE DIRECTORY: " << RESET << compare_root_path << endl;
     }
+
     delete hist_file;
 }
 
