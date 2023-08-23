@@ -262,41 +262,6 @@ vector<int> filter(vector<vector<string>> data, string filter) // Filter for a G
     return positions;
 }
 
-vector<int> filter_ss(vector<vector<string>> data, string source_type, string scintillator_type) // Filter for Source-Scintillator
-{
-    vector<string> temp_source_type = splitter(source_type, ":");
-    vector<string> temp_scintillator_type = splitter(scintillator_type, ":");
-    string head_source = temp_source_type[0];
-    string tail_source = temp_source_type[1];
-    string head_scintillator = temp_scintillator_type[0];
-    string tail_scintillator = temp_scintillator_type[1];
-
-    int source_filter_position = 0;
-    int scintillator_filter_position = 0;
-    vector<int> data_positions;
-    for (int i = 0; i < int(data[0].size()); ++i)
-    {
-        if (data[0][i] == head_source)
-        {
-            source_filter_position = i; // column
-        }
-
-        if (data[0][i] == head_scintillator)
-        {
-            scintillator_filter_position = i; // column
-        }
-    }
-
-    for (int i = 1; i < int(data.size()); ++i)
-    {
-        if (data[i][source_filter_position] == tail_source && data[i][scintillator_filter_position] == tail_scintillator)
-        {
-            data_positions.push_back(i);
-        }
-    }
-    return data_positions;
-}
-
 string concatenate_vec(string head_string, vector<string> vector_line, string first, string last, string DELIMITER)
 {
     int i_first;
@@ -402,7 +367,7 @@ vector<string> compare_available_options(vector<vector<string>> data, int column
     return v;
 }
 
-void custom_compare(string hist_path)
+void custom_compare(string hist_path) // filter + compare_hist for Custom Combinations
 {
     gErrorIgnoreLevel = kFatal; // Verbose Mode
 
@@ -536,7 +501,7 @@ void custom_compare(string hist_path)
     delete hist_file;
 }
 
-void standard_compare(string hist_path) // filter + compare_hist
+void standard_compare(string hist_path) // filter + compare_hist for Scintillator and Source Combinations
 {
     gErrorIgnoreLevel = kFatal; // Verbose Mode
 
@@ -552,20 +517,41 @@ void standard_compare(string hist_path) // filter + compare_hist
     hist_output = hist_reader(*hist_file);
 
     // Generate Result For All Sources and Scintillators:
-    vector<string> option_source = {"Ba133", "Cs137", "Co57"};
-    vector<string> option_scintillator = {"EJ276", "CR001", "CR002", "CR003", "EJ200"};
+    int position_source = find_position(hist_output[0], "Source");
+    int position_scintillator = find_position(hist_output[0], "Scintillator");
+    vector<string> option_source = compare_available_options(hist_output, position_source, {});
+    vector<string> option_scintillator = compare_available_options(hist_output, position_scintillator, {});
 
+    // Print All Scintillator and Source Options:
+    cout << YELLOW << "Sources: " << RESET;
+    for (int i = 0; i < int(option_source.size()); i++)
+    {
+        cout << option_source[i] << ", ";
+    }
+
+    cout << YELLOW << "\nScintillators: " << RESET;
+    for (int i = 0; i < int(option_scintillator.size()); i++)
+    {
+        cout << option_scintillator[i] << ", ";
+    }
+    cout << "\n";
+
+    // Ask for Bin Division:
     string option_division;
-    cout << "Divide Entries By: ";
+    cout << YELLOW << "Divide Entries By: " << RESET;
     getline(cin, option_division);
+    cout << "\n";
 
     for (int isource = 0; isource < int(option_source.size()); ++isource)
     {
         for (int iscintillator = 0; iscintillator < int(option_scintillator.size()); ++iscintillator)
         {
-            string filter1 = "Source:" + option_source[isource];
-            string filter2 = "Scintillator:" + option_scintillator[iscintillator];
-            vector<int> positions = filter_ss(hist_output, filter1, filter2); // Find Positions of Valid Combinations
+            // Find Source-Scintillator Combination Positions:
+            string filter_source = "Source:" + option_source[isource];
+            string filter_scintillator = "Scintillator:" + option_scintillator[iscintillator];
+            vector<int> source_position = filter(hist_output, filter_source);
+            vector<int> source_scintillator = filter(hist_output, filter_scintillator);
+            vector<int> positions = filter_intersector(source_position, source_scintillator);
 
             if (positions.size() == 0)
             {
@@ -594,7 +580,7 @@ void standard_compare(string hist_path) // filter + compare_hist
                         hist_values.push_back(temp_hist_values);
                     }
                     string hist_type = hist_output[0][t];
-                    vector<string> filters = {filter1, filter2};
+                    vector<string> filters = {filter_scintillator, filter_source};
                     compare_hist(hist_values, filters, hist_type, compare_root_path, option_division);
                 }
                 hist_root_file->Write();
@@ -606,7 +592,7 @@ void standard_compare(string hist_path) // filter + compare_hist
     delete hist_file;
 }
 
-void histogram_result_writer(string data_path, string data_format_path, vector<string> results, vector<string> errors) // Print Histogram Results
+void histogram_result_writer(string data_path, string data_format_path, vector<string> results, vector<string> errors) // Write Histogram Results
 {
     string output_hist_path = string(fs::current_path()) + "/outputs/data/";
     string outputname = splitter(data_path, "/").back();
@@ -912,22 +898,6 @@ vector<string> analyser_h5(string filename, double ns) // Analysis for H5 Files
 
     fs::create_directories(outputpath);
 
-    // Initialize:
-    int segment = 1024;
-    vector<string> results_and_errors;
-    string temp_results;
-    string temp_errors;
-    string rootname = outputpath + "result.root";
-    TFile *rootfile = new TFile(rootname.c_str(), "RECREATE");
-    int no_of_datasets = segment;
-    vector<double> peak_voltages(no_of_datasets);
-    vector<double> peak_time;
-    vector<double> integrals;
-    vector<double> risetime;
-    vector<double> falltime;
-    vector<double> hist_result;
-    vector<string> name_split;
-
     // Dataset Path:
     string ds_name_head = "/Waveforms/Channel 1/Channel 1 Seg";
     string ds_name_tail = "Data";
@@ -935,7 +905,26 @@ vector<string> analyser_h5(string filename, double ns) // Analysis for H5 Files
     // Open H5 File:
     H5File fp(filename.c_str(), H5F_ACC_RDONLY);
 
-    for (int i = 0; i < segment; ++i)
+    // Get the Number of Segments:
+    Group count_group = fp.openGroup("/Waveforms/Channel 1");
+    hsize_t size = count_group.getNumObjs();
+    int no_of_datasets = int(size);
+
+    // Initialize:
+    vector<string> results_and_errors;
+    string temp_results;
+    string temp_errors;
+    string rootname = outputpath + "result.root";
+    vector<double> peak_time;
+    vector<double> integrals;
+    vector<double> risetime;
+    vector<double> falltime;
+    vector<double> hist_result;
+    vector<string> name_split;
+    vector<double> peak_voltages(no_of_datasets);
+    TFile *rootfile = new TFile(rootname.c_str(), "RECREATE");
+
+    for (int i = 0; i < no_of_datasets; ++i)
     {
         // Open Dataset:
         string datasetPath = ds_name_head + to_string(i + 1) + ds_name_tail;
