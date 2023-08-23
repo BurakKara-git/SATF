@@ -178,9 +178,10 @@ void compare_hist(vector<vector<double>> data, vector<string> filters, string hi
         string filtername = splitter(filters[i], ":")[1];
         histo_name.append("_" + filtername);
     }
+    std::replace(histo_name.begin(), histo_name.end(), '/', '-');
+
     vector<double> temp_data;
     vector<double> temp_std;
-
     for (int i = 0; i < int(data.size()); ++i)
     {
         temp_data.push_back(abs(data[i][0]));
@@ -472,6 +473,7 @@ void custom_compare(string hist_path) // filter + compare_hist for Custom Combin
             string filtername = splitter(filters[i], ":")[1];
             name_filter.append("_" + filtername);
         }
+        std::replace(name_filter.begin(), name_filter.end(), '/', '-');
         string compare_root_path = string(fs::current_path()) + "/outputs/compare/" + hist_data_source + "/" + name_filter + "/";
         string compare_root_name = compare_root_path + "compare_hist.root";
         fs::create_directories(compare_root_path.c_str());
