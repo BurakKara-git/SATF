@@ -1,12 +1,22 @@
 #include "essential.h"
-#include <bits/stdc++.h>
 #include <H5Cpp.h>
-#include <algorithm>
 using namespace H5;
 using namespace std;
 namespace fs = std::filesystem;
 
-vector<vector<double>> reader(ifstream &thefile) // Generate The Matrix - Hazal's Function
+/**
+ * Reads data from an input file stream and generates a matrix of double values.
+ *
+ * This function takes an input file stream as an argument and reads data line by line
+ * from the file. Each line is treated as a row of elements, which are space-separated.
+ * The function then generates a matrix of double values from the read data. The matrix
+ * is represented as a vector of vectors of double values. Transpose of the matrix is returned.
+ *
+ * @author Hazal
+ * @param thefile An input file stream containing data to be read.
+ * @return A transpose matrix of double values, represented as a vector of vectors.
+ */
+vector<vector<double>> reader(ifstream &thefile)
 {
     string line;
     vector<vector<string>> matrix;
@@ -54,7 +64,19 @@ vector<vector<double>> reader(ifstream &thefile) // Generate The Matrix - Hazal'
     return transpose;
 }
 
-vector<string> splitter(string name, string DELIMITER) // Split string, Return string vector
+/**
+ * Splits a given string into multiple substrings based on a specified delimiter.
+ *
+ * This function takes a string and a delimiter as input and splits the input
+ * string into multiple substrings using the delimiter as a separator. The
+ * substrings are stored in a vector of strings and returned.
+ *
+ * @author Burak
+ * @param name The input string to be split.
+ * @param DELIMITER The delimiter used to separate the substrings.
+ * @return A vector of strings containing the substrings after splitting.
+ */
+vector<string> splitter(string name, string DELIMITER)
 {
     vector<string> name_split;
     char *token = strtok(name.data(), DELIMITER.c_str());
@@ -67,7 +89,19 @@ vector<string> splitter(string name, string DELIMITER) // Split string, Return s
     return name_split;
 }
 
-string file_selector(string path) // Find all txt files in the folder
+/**
+ * Finds all TXT and H5 files in a specified directory.
+ *
+ * This function searches the specified directory for files with the extensions
+ * ".txt" and ".h5". It uses the 'find' command to perform the search and writes
+ * the paths of the found files to a temporary text file. The path of the temporary
+ * file is returned.
+ *
+ * @author Burak
+ * @param path The path of the directory in which to search for files.
+ * @return The path of the temporary text file containing the list of found files.
+ */
+string file_selector(string path)
 {
     string found_files_path = "temp_FoundFiles.txt";
     string command = "find " + path + " -type f -iname \\*.txt -o -type f -iname \\*.h5 > " + found_files_path;
@@ -79,7 +113,17 @@ string file_selector(string path) // Find all txt files in the folder
     return found_files_path;
 }
 
-int line_counter(string path) // Count number of lines
+/**
+ * Counts the number of lines in a text file.
+ *
+ * This function reads the specified text file line by line and increments a
+ * counter for each line read. It returns the total number of lines in the file.
+ *
+ * @author Burak
+ * @param path The path of the text file for which to count the lines.
+ * @return The total number of lines in the specified text file.
+ */
+int line_counter(string path)
 {
     unsigned int lines = 0;
 
@@ -92,14 +136,36 @@ int line_counter(string path) // Count number of lines
     return lines;
 }
 
-bool is_number(const std::string &s) // Check if string is a number
+/**
+ * Checks if a given string represents a valid number.
+ *
+ * This function attempts to convert the given string to a double using the
+ * strtod function. If the conversion is successful and the entire string has
+ * been processed, and the resulting value is not infinity, the function returns true.
+ * Otherwise, it returns false.
+ *
+ * @author Burak
+ * @param s The string to be checked for numeric validity.
+ * @return True if the string represents a valid number, false otherwise.
+ */
+bool is_number(const std::string &s)
 {
     char *end = nullptr;
     double val = strtod(s.c_str(), &end);
     return end != s.c_str() && *end == '\0' && val != HUGE_VAL;
 }
 
-void interface() // Cool - Hazal
+/**
+ * Displays a customized interface logo on the console.
+ *
+ * This function prints a visually appealing logo with the title "SAT-Force Analysis Interface"
+ * on the console. The logo is generated using a combination of colored and plain text,
+ * creating a distinct appearance.
+ *
+ * @author Hazal
+ *
+ */
+void interface()
 {
     cout << BOLDORANGE << "\n"
          << "_____________________________________________"
@@ -129,7 +195,19 @@ void interface() // Cool - Hazal
          << RESET << endl;
 }
 
-int find_position(vector<string> vec_string, string search_string) // Find First Occurence of a String in a Vector
+/**
+ * Finds the position of the first occurrence of a specified string in a vector of strings.
+ *
+ * This function searches for the first occurrence of the provided search string in the given
+ * vector of strings and returns the position (index) where the string is found. If the string
+ * is not found, the function returns -1.
+ *
+ * @author Burak
+ * @param vec_string A vector of strings in which the search will be performed.
+ * @param search_string The string to search for within the vector.
+ * @return The position (index) of the first occurrence of the search string, or -1 if not found.
+ */
+int find_position(vector<string> vec_string, string search_string)
 {
     int position = -1;
 
@@ -143,6 +221,18 @@ int find_position(vector<string> vec_string, string search_string) // Find First
     return position;
 }
 
+/**
+ * Computes the summation of elements in a vector of doubles starting from a specified index.
+ *
+ * This function calculates the sum of elements in the provided vector of doubles, starting from
+ * the specified index 'first' and summing up to the end of the vector. The result is the sum of
+ * the elements within the specified range.
+ *
+ * @author Burak
+ * @param input A vector of double values for which the summation will be performed.
+ * @param first The index from which to start the summation (inclusive).
+ * @return The summation of elements in the vector starting from the specified index.
+ */
 double summation_vec(vector<double> input, int first)
 {
     int n = input.size();
@@ -154,7 +244,19 @@ double summation_vec(vector<double> input, int first)
     return sum;
 }
 
-vector<vector<string>> hist_reader(ifstream &thefile) // Read Output Histogram Data
+/**
+ * Reads histogram data from an input file and returns a matrix of strings.
+ *
+ * This function reads histogram data from the provided input file, where each line represents
+ * a row of comma-separated values. It splits each line into separate string elements using the
+ * ',' delimiter and stores these elements in a vector. The resulting vector of vectors represents
+ * the histogram data in tabular form.
+ *
+ * @author Burak
+ * @param thefile An input file stream containing histogram data in comma-separated format.
+ * @return A matrix of strings where each row represents histogram data.
+ */
+vector<vector<string>> hist_reader(ifstream &thefile)
 {
     string line;
     vector<vector<string>> matrix;
@@ -169,7 +271,23 @@ vector<vector<string>> hist_reader(ifstream &thefile) // Read Output Histogram D
     return matrix;
 }
 
-void compare_hist(vector<vector<double>> data, vector<string> filters, string hist_type, string output_path, string bin_division) // Create Histograms for Certain Combinations
+/**
+ * Create histograms for certain combinations of data and filters.
+ *
+ * This function creates histograms based on the provided data and filters. It generates a histogram
+ * for each combination of data and filter, where each histogram represents a specific histogram type.
+ * The histograms are stored in PDF files with names determined by the histogram type and filter names.
+ * The function supports specifying the number of bins for the histograms through bin division.
+ *
+ * @author Burak
+ * @param data A matrix of data values where each row represents a data point and its associated standard deviation.
+ * @param filters A vector of filter strings that provide additional information for histogram naming.
+ * @param hist_type A string indicating the type of histogram to be created.
+ * @param output_path The path where the generated histograms will be saved as PDF files.
+ * @param bin_division The division factor used to determine the number of bins in the histograms.
+ * @return None.
+ */
+void compare_hist(vector<vector<double>> data, vector<string> filters, string hist_type, string output_path, string bin_division)
 {
     string histo_name = hist_type;
 
@@ -232,7 +350,20 @@ void compare_hist(vector<vector<double>> data, vector<string> filters, string hi
     delete c_hist;
 }
 
-vector<int> filter(vector<vector<string>> data, string filter) // Filter for a Given Type and Value
+/**
+ * Filter data based on a given filter type and value.
+ *
+ * This function filters a matrix of data based on a specified filter type and value.
+ * It searches for the provided filter type in the header row of the data matrix,
+ * then filters the data rows based on the matching filter value and entry size(>=1000).
+ * The function returns a vector containing the positions of the filtered data rows.
+ *
+ * @author Burak
+ * @param data A matrix of data values where each row represents a data point and its associated attributes.
+ * @param filter A string containing the filter type and value in the format "type:value".
+ * @return A vector of integers representing the positions of the filtered data rows.
+ */
+vector<int> filter(vector<vector<string>> data, string filter)
 {
     vector<int> positions;
     string filter_type = splitter(filter, ":")[0];
@@ -263,6 +394,20 @@ vector<int> filter(vector<vector<string>> data, string filter) // Filter for a G
     return positions;
 }
 
+/**
+ * Concatenate selected elements of a vector into a single string.
+ *
+ * This function concatenates selected elements of a given vector of strings,
+ * starting from the 'first' element and ending before the 'last' element.
+ * The concatenated string is formed by joining the selected elements using the provided delimiter.
+ *
+ * @param head_string The initial string that forms the beginning of the concatenated string.
+ * @param vector_line The vector of strings containing the elements to be concatenated.
+ * @param first The first element to include in the concatenation (inclusive), or an empty string to start from the beginning.
+ * @param last The last element to include in the concatenation (exclusive), or an empty string to include all elements.
+ * @param DELIMITER The delimiter used to join the concatenated elements.
+ * @return A single string formed by concatenating the selected elements with the specified delimiter.
+ */
 string concatenate_vec(string head_string, vector<string> vector_line, string first, string last, string DELIMITER)
 {
     int i_first;
@@ -293,7 +438,16 @@ string concatenate_vec(string head_string, vector<string> vector_line, string fi
     return new_line;
 }
 
-void hadd_creator(string hadd_path, string input_path) // Generate and run hadd command
+/**
+ * Create a ROOT file by merging multiple input ROOT files using 'hadd' command.
+ *
+ * This function generates and runs the 'hadd' command to merge multiple input ROOT files
+ * into a single output ROOT file at the specified path.
+ *
+ * @param hadd_path The path where the merged ROOT file will be saved.
+ * @param input_path The path containing the input ROOT files to be merged.
+ */
+void hadd_creator(string hadd_path, string input_path)
 {
     string hadd_command = "hadd -f " + hadd_path + " `find " + input_path + " -type f -name '*.root'`";
 
@@ -322,7 +476,17 @@ void hadd_creator(string hadd_path, string input_path) // Generate and run hadd 
     }
 }
 
-vector<int> filter_intersector(vector<int> first, vector<int> second) // Intersection of Two Vectors
+/**
+ * Find the intersection of two integer vectors.
+ *
+ * This function computes the intersection of two integer vectors and returns a new vector
+ * containing the common elements between the two input vectors.
+ *
+ * @param first The first integer vector.
+ * @param second The second integer vector.
+ * @return A vector containing the common elements of the input vectors.
+ */
+vector<int> filter_intersector(vector<int> first, vector<int> second)
 {
     int n1 = first.size();
     int n2 = second.size();
@@ -336,6 +500,18 @@ vector<int> filter_intersector(vector<int> first, vector<int> second) // Interse
     return v;
 }
 
+/**
+ * Find available options for comparison in a given column of data.
+ *
+ * This function extracts and returns a vector of available options for comparison from a specified
+ * column of data. It can optionally filter the options based on a set of positions or consider
+ * the entire data set if an empty position vector is provided.
+ *
+ * @param data A 2D vector containing the data table.
+ * @param column The index of the column from which to extract options.
+ * @param positions A vector of positions to filter data rows (optional).
+ * @return A vector containing the unique available options for comparison.
+ */
 vector<string> compare_available_options(vector<vector<string>> data, int column, vector<int> positions)
 {
     vector<string> v;
@@ -368,7 +544,16 @@ vector<string> compare_available_options(vector<vector<string>> data, int column
     return v;
 }
 
-void custom_compare(string hist_path) // filter + compare_hist for Custom Combinations
+/**
+ * Perform custom comparisons of histograms using user-defined filters.
+ *
+ * This function guides the user through the process of custom comparisons of histograms by applying
+ * user-specified filters. It reads histogram data from a provided file, prompts the user to select
+ * filters for comparison, and generates histograms for selected combinations.
+ *
+ * @param hist_path The path to the histogram result file.
+ */
+void custom_compare(string hist_path)
 {
     gErrorIgnoreLevel = kFatal; // Verbose Mode
 
@@ -503,7 +688,16 @@ void custom_compare(string hist_path) // filter + compare_hist for Custom Combin
     delete hist_file;
 }
 
-void standard_compare(string hist_path) // filter + compare_hist for Scintillator and Source Combinations
+/**
+ * Perform standard comparisons of histograms for various source, scintillator, and threshold combinations.
+ *
+ * This function generates standard comparisons of histograms by considering different combinations
+ * of source, scintillator, and threshold options. It reads histogram data from a provided file,
+ * prompts the user for bin division, and generates histograms for selected combinations.
+ *
+ * @param hist_path The path to the histogram result file.
+ */
+void standard_compare(string hist_path)
 {
     gErrorIgnoreLevel = kFatal; // Verbose Mode
 
@@ -609,7 +803,19 @@ void standard_compare(string hist_path) // filter + compare_hist for Scintillato
     delete hist_file;
 }
 
-void histogram_result_writer(string data_path, string data_format_path, vector<string> results, vector<string> errors) // Write Histogram Results
+/**
+ * Write histogram results and errors to output files.
+ *
+ * This function takes the paths to histogram data, data format, and the calculated results along with
+ * associated errors. It generates output files to store histogram results and errors. The function also
+ * creates directories for the output files based on the current working directory.
+ *
+ * @param data_path The path to the input histogram data.
+ * @param data_format_path The path to the data format file.
+ * @param results A vector containing calculated histogram results as strings.
+ * @param errors A vector containing error messages as strings.
+ */
+void histogram_result_writer(string data_path, string data_format_path, vector<string> results, vector<string> errors)
 {
     string output_hist_path = string(fs::current_path()) + "/outputs/data/";
     string outputname = splitter(data_path, "/").back();
@@ -655,7 +861,20 @@ void histogram_result_writer(string data_path, string data_format_path, vector<s
     }
 }
 
-vector<string> analyser_matrix(vector<vector<double>> input, string filename, double ns) // Analysis for Matrix
+/**
+ * Analyze matrix data and generate histogram results.
+ *
+ * This function takes a 2D matrix of input data, a filename, and a sampling interval in seconds.
+ * It performs analysis on the matrix data, calculates peak voltages, rise and fall times, and integrates
+ * the falling part of the data. The results are stored in histograms and saved as ROOT files. Error handling
+ * is performed for NaN values and corrupted data segments.
+ *
+ * @param input A 2D vector containing the input data matrix.
+ * @param filename The filename of the input data.
+ * @param ns The sampling interval in seconds.
+ * @return A vector of strings containing calculated histogram results and error messages.
+ */
+vector<string> analyser_matrix(vector<vector<double>> input, string filename, double ns)
 {
     // Create Directories:
     string extension = splitter(filename, ".").back();
@@ -901,7 +1120,19 @@ vector<string> analyser_matrix(vector<vector<double>> input, string filename, do
     return results_and_errors;
 }
 
-vector<string> analyser_h5(string filename, double ns) // Analysis for H5 Files
+/**
+ * Analyze H5 file data and generate histogram results.
+ *
+ * This function takes an H5 file, reads dataset segments, and performs analysis on the data,
+ * calculating peak voltages, rise and fall times, and integrating the falling part of the data.
+ * The results are stored in histograms and saved as ROOT files. Error handling is performed for
+ * NaN values and corrupted data segments.
+ *
+ * @param filename The filename of the H5 file.
+ * @param ns The sampling interval in seconds.
+ * @return A vector of strings containing calculated histogram results and error messages.
+ */
+vector<string> analyser_h5(string filename, double ns)
 {
     // Create Directories:
     string extension = splitter(filename, ".").back();
