@@ -401,6 +401,7 @@ vector<int> filter(vector<vector<string>> data, string filter)
  * starting from the 'first' element and ending before the 'last' element.
  * The concatenated string is formed by joining the selected elements using the provided delimiter.
  *
+ * @author Burak
  * @param head_string The initial string that forms the beginning of the concatenated string.
  * @param vector_line The vector of strings containing the elements to be concatenated.
  * @param first The first element to include in the concatenation (inclusive), or an empty string to start from the beginning.
@@ -444,6 +445,7 @@ string concatenate_vec(string head_string, vector<string> vector_line, string fi
  * This function generates and runs the 'hadd' command to merge multiple input ROOT files
  * into a single output ROOT file at the specified path.
  *
+ * @author Burak
  * @param hadd_path The path where the merged ROOT file will be saved.
  * @param input_path The path containing the input ROOT files to be merged.
  */
@@ -482,6 +484,7 @@ void hadd_creator(string hadd_path, string input_path)
  * This function computes the intersection of two integer vectors and returns a new vector
  * containing the common elements between the two input vectors.
  *
+ * @author Burak
  * @param first The first integer vector.
  * @param second The second integer vector.
  * @return A vector containing the common elements of the input vectors.
@@ -507,6 +510,7 @@ vector<int> filter_intersector(vector<int> first, vector<int> second)
  * column of data. It can optionally filter the options based on a set of positions or consider
  * the entire data set if an empty position vector is provided.
  *
+ * @author Burak
  * @param data A 2D vector containing the data table.
  * @param column The index of the column from which to extract options.
  * @param positions A vector of positions to filter data rows (optional).
@@ -551,6 +555,7 @@ vector<string> compare_available_options(vector<vector<string>> data, int column
  * user-specified filters. It reads histogram data from a provided file, prompts the user to select
  * filters for comparison, and generates histograms for selected combinations.
  *
+ * @author Burak
  * @param hist_path The path to the histogram result file.
  */
 void custom_compare(string hist_path)
@@ -695,6 +700,7 @@ void custom_compare(string hist_path)
  * of source, scintillator, and threshold options. It reads histogram data from a provided file,
  * prompts the user for bin division, and generates histograms for selected combinations.
  *
+ * @author Burak
  * @param hist_path The path to the histogram result file.
  */
 void standard_compare(string hist_path)
@@ -810,6 +816,7 @@ void standard_compare(string hist_path)
  * associated errors. It generates output files to store histogram results and errors. The function also
  * creates directories for the output files based on the current working directory.
  *
+ * @author Burak
  * @param data_path The path to the input histogram data.
  * @param data_format_path The path to the data format file.
  * @param results A vector containing calculated histogram results as strings.
@@ -869,6 +876,7 @@ void histogram_result_writer(string data_path, string data_format_path, vector<s
  * the falling part of the data. The results are stored in histograms and saved as ROOT files. Error handling
  * is performed for NaN values and corrupted data segments.
  *
+ * @author Burak
  * @param input A 2D vector containing the input data matrix.
  * @param filename The filename of the input data.
  * @param ns The sampling interval in seconds.
@@ -1128,6 +1136,7 @@ vector<string> analyser_matrix(vector<vector<double>> input, string filename, do
  * The results are stored in histograms and saved as ROOT files. Error handling is performed for
  * NaN values and corrupted data segments.
  *
+ * @author Burak
  * @param filename The filename of the H5 file.
  * @param ns The sampling interval in seconds.
  * @return A vector of strings containing calculated histogram results and error messages.
