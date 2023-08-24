@@ -254,7 +254,7 @@ vector<int> filter(vector<vector<string>> data, string filter) // Filter for a G
 
     for (int i = 1; i < int(data.size()); ++i)
     {
-        if (data[i][filter_type_position] == filter_value)
+        if (data[i][filter_type_position] == filter_value && stoi(data[i][0]) >= 1000)
         {
             positions.push_back(i);
         }
@@ -518,11 +518,14 @@ void standard_compare(string hist_path) // filter + compare_hist for Scintillato
     hist_file->open(hist_path.c_str());
     hist_output = hist_reader(*hist_file);
 
-    // Generate Result For All Sources and Scintillators:
+    // Generate Result For All Sources, Scintillators and Thresholds:
     int position_source = find_position(hist_output[0], "Source");
     int position_scintillator = find_position(hist_output[0], "Scintillator");
+    int position_th = find_position(hist_output[0], "Threshold");
+
     vector<string> option_source = compare_available_options(hist_output, position_source, {});
     vector<string> option_scintillator = compare_available_options(hist_output, position_scintillator, {});
+    vector<string> option_th = compare_available_options(hist_output, position_th, {});
 
     // Print All Scintillator and Source Options:
     cout << YELLOW << "Sources: " << RESET;
@@ -536,58 +539,70 @@ void standard_compare(string hist_path) // filter + compare_hist for Scintillato
     {
         cout << option_scintillator[i] << ", ";
     }
+
+    cout << YELLOW << "\nThresholds: " << RESET;
+    for (int i = 0; i < int(option_th.size()); i++)
+    {
+        cout << option_th[i] << ", ";
+    }
     cout << "\n";
 
     // Ask for Bin Division:
     string option_division;
     cout << YELLOW << "Divide Entries By: " << RESET;
     getline(cin, option_division);
-    cout << "\n";
 
     for (int isource = 0; isource < int(option_source.size()); ++isource)
     {
         for (int iscintillator = 0; iscintillator < int(option_scintillator.size()); ++iscintillator)
         {
-            // Find Source-Scintillator Combination Positions:
-            string filter_source = "Source:" + option_source[isource];
-            string filter_scintillator = "Scintillator:" + option_scintillator[iscintillator];
-            vector<int> source_position = filter(hist_output, filter_source);
-            vector<int> source_scintillator = filter(hist_output, filter_scintillator);
-            vector<int> positions = filter_intersector(source_position, source_scintillator);
-
-            if (positions.size() == 0)
+            for (int ith = 0; ith < int(option_th.size()); ++ith)
             {
-                cout << RED << "ERROR - NO COMBINATIONS FOR: " << option_source[isource] << " - " << option_scintillator[iscintillator] << RESET << endl;
-            }
+                // Find Source-Scintillator Combination Positions:
+                string filter_source = "Source:" + option_source[isource];
+                string filter_scintillator = "Scintillator:" + option_scintillator[iscintillator];
+                string filter_th = "Threshold:" + option_th[ith];
 
-            else
-            {
-                // Create Directories and Initialize Root File:
-                string compare_root_path = string(fs::current_path()) + "/outputs/compare/" + hist_data_source + "/" + option_source[isource] + "_" + option_scintillator[iscintillator] + "/";
-                string compare_root_name = compare_root_path + "compare_hist.root";
-                fs::create_directories(compare_root_path.c_str());
-                TFile *hist_root_file = new TFile(compare_root_name.c_str(), "RECREATE");
+                vector<int> source_position = filter(hist_output, filter_source);
+                vector<int> source_scintillator = filter(hist_output, filter_scintillator);
+                vector<int> source_th = filter(hist_output, filter_th);
+                vector<int> positions = filter_intersector(source_position, source_scintillator);
+                positions = filter_intersector(positions, source_th);
 
-                for (int t = 1; t < 6; ++t) // Generate 5 Histograms
+                if (positions.size() == 0)
                 {
-                    vector<vector<double>> hist_values;
-                    for (int k = 0; k < int(positions.size()); ++k)
-                    {
-                        int row = positions[k];
-                        vector<double> temp_hist_values;
-                        double value = stof(hist_output[row][t]);
-                        double error = stof(hist_output[row][t + 5]);
-                        temp_hist_values.push_back(value);
-                        temp_hist_values.push_back(error);
-                        hist_values.push_back(temp_hist_values);
-                    }
-                    string hist_type = hist_output[0][t];
-                    vector<string> filters = {filter_scintillator, filter_source};
-                    compare_hist(hist_values, filters, hist_type, compare_root_path, option_division);
+                    cout << RED << "ERROR - NO COMBINATIONS FOR: " << option_source[isource] << " - " << option_scintillator[iscintillator] << " - " << option_th[ith] << RESET << endl;
                 }
-                hist_root_file->Write();
-                delete hist_root_file;
-                cout << GREEN << "RESULT SAVED TO THE DIRECTORY: " << RESET << compare_root_path << endl;
+
+                else
+                {
+                    // Create Directories and Initialize Root File:
+                    string compare_root_path = string(fs::current_path()) + "/outputs/compare/" + hist_data_source + "/" + option_source[isource] + "_" + option_scintillator[iscintillator] + "_" + option_th[ith] + "/";
+                    string compare_root_name = compare_root_path + "compare_hist.root";
+                    fs::create_directories(compare_root_path.c_str());
+                    TFile *hist_root_file = new TFile(compare_root_name.c_str(), "RECREATE");
+
+                    for (int t = 1; t < 6; ++t) // Generate 5 Histograms
+                    {
+                        vector<vector<double>> hist_values;
+                        for (int k = 0; k < int(positions.size()); ++k)
+                        {
+                            int row = positions[k];
+                            vector<double> temp_hist_values;
+                            double value = stof(hist_output[row][t]);
+                            double error = stof(hist_output[row][t + 5]);
+                            temp_hist_values.push_back(value);
+                            temp_hist_values.push_back(error);
+                            hist_values.push_back(temp_hist_values);
+                        }
+                        string hist_type = hist_output[0][t];
+                        vector<string> filters = {filter_scintillator, filter_source};
+                        compare_hist(hist_values, filters, hist_type, compare_root_path, option_division);
+                    }
+                    hist_root_file->Write();
+                    delete hist_root_file;
+                    cout << GREEN << "RESULT SAVED TO THE DIRECTORY: " << RESET << compare_root_path << endl;
+                }
             }
         }
     }
