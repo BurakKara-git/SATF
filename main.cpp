@@ -74,7 +74,7 @@ int main()
         }
         return 0;
     }
-
+    
     else if (option == "hadd" || option == "h") // Merge Root Files
     {
         string option_hadd_input_path;

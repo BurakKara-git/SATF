@@ -5,63 +5,43 @@ using namespace std;
 namespace fs = std::filesystem;
 
 /**
- * Reads data from an input file stream and generates a matrix of double values.
+ * Displays a customized interface logo on the console.
  *
- * This function takes an input file stream as an argument and reads data line by line
- * from the file. Each line is treated as a row of elements, which are space-separated.
- * The function then generates a matrix of double values from the read data. The matrix
- * is represented as a vector of vectors of double values. Transpose of the matrix is returned.
+ * This function prints a visually appealing logo with the title "SAT-Force Analysis Interface"
+ * on the console. The logo is generated using a combination of colored and plain text,
+ * creating a distinct appearance.
  *
  * @author Hazal
- * @param thefile An input file stream containing data to be read.
- * @return A transpose matrix of double values, represented as a vector of vectors.
+ *
  */
-vector<vector<double>> reader(ifstream &thefile)
+void interface()
 {
-    string line;
-    vector<vector<string>> matrix;
-    vector<vector<double>> empty;
-    int n_rows = 0;
-    int n_columns = 0;
-
-    while (getline(thefile, line))
-    {
-        istringstream ss(line);
-        string element;
-        vector<string> row;
-
-        while (ss >> element)
-        {
-            row.push_back(element);
-        }
-        matrix.push_back(row);
-        n_rows++;
-        if (n_columns == 0)
-        {
-            n_columns = row.size();
-        }
-    }
-
-    // Transpose the matrix:
-    vector<vector<double>> transpose(n_columns, vector<double>(n_rows));
-    for (int i = 0; i < n_columns; i++)
-    {
-        for (int j = 0; j < n_rows; j++)
-        {
-            transpose[i][j] = stof(matrix[j][i]); // convert string to float values
-        }
-    }
-
-    cout << "\n"
-            " "
-            "# of rows      :  "
-         << n_rows << "\n"
-         << " "
-            "# of columns   :  "
-         << n_columns << "\n"
-         << endl;
-
-    return transpose;
+    cout << BOLDORANGE << "\n"
+         << "_____________________________________________"
+         << "\n"
+         << "                                             "
+         << "\n"
+         << "    _____      _______            ______     "
+         << "\n"
+         << "   / ____|  /\\|__   __|          |  ____|   "
+         << "\n"
+         << "  | (___   /  \\  | |     ______  | |__      "
+         << "\n"
+         << "   \\___ \\ / /\\ \\ | |    |______| |  __|  "
+         << "\n"
+         << "   ____) / ____ \\| |             | |        "
+         << "\n"
+         << "  |_____/_/    \\_\\_|             |_|       "
+         << "\n"
+         << "                                             "
+         << "\n"
+         << RESET << ORANGE
+         << "        SAT-Force Analysis Interface         "
+         << "\n"
+         << RESET << BOLDORANGE
+         << "_____________________________________________"
+         << "\n"
+         << RESET << endl;
 }
 
 /**
@@ -156,46 +136,6 @@ bool is_number(const std::string &s)
 }
 
 /**
- * Displays a customized interface logo on the console.
- *
- * This function prints a visually appealing logo with the title "SAT-Force Analysis Interface"
- * on the console. The logo is generated using a combination of colored and plain text,
- * creating a distinct appearance.
- *
- * @author Hazal
- *
- */
-void interface()
-{
-    cout << BOLDORANGE << "\n"
-         << "_____________________________________________"
-         << "\n"
-         << "                                             "
-         << "\n"
-         << "    _____      _______            ______     "
-         << "\n"
-         << "   / ____|  /\\|__   __|          |  ____|   "
-         << "\n"
-         << "  | (___   /  \\  | |     ______  | |__      "
-         << "\n"
-         << "   \\___ \\ / /\\ \\ | |    |______| |  __|  "
-         << "\n"
-         << "   ____) / ____ \\| |             | |        "
-         << "\n"
-         << "  |_____/_/    \\_\\_|             |_|       "
-         << "\n"
-         << "                                             "
-         << "\n"
-         << RESET << ORANGE
-         << "        SAT-Force Analysis Interface         "
-         << "\n"
-         << RESET << BOLDORANGE
-         << "_____________________________________________"
-         << "\n"
-         << RESET << endl;
-}
-
-/**
  * Finds the position of the first occurrence of a specified string in a vector of strings.
  *
  * This function searches for the first occurrence of the provided search string in the given
@@ -245,6 +185,175 @@ double summation_vec(vector<double> input, int first)
 }
 
 /**
+ * Find available options for comparison in a given column of data.
+ *
+ * This function extracts and returns a vector of available options for comparison from a specified
+ * column of data. It can optionally filter the options based on a set of positions or consider
+ * the entire data set if an empty position vector is provided.
+ *
+ * @author Burak
+ * @param data A 2D vector containing the data table.
+ * @param column The index of the column from which to extract options.
+ * @param positions A vector of positions to filter data rows (optional).
+ * @return A vector containing the unique available options for comparison.
+ */
+vector<string> compare_available_options(vector<vector<string>> data, int column, vector<int> positions)
+{
+    vector<string> v;
+    int n;
+
+    if (positions.size() == 0)
+    {
+        n = int(data.size());
+        for (int i = 1; i < n; i++)
+        {
+            v.push_back(data[i][column]);
+        }
+    }
+
+    else
+    {
+        n = int(positions.size());
+        for (int i = 0; i < n; i++)
+        {
+            int row = positions[i];
+            v.push_back(data[row][column]);
+        }
+    }
+
+    sort(v.begin(), v.end());
+    vector<string>::iterator it;
+    it = unique(v.begin(), v.end());
+    v.resize(distance(v.begin(), it));
+
+    return v;
+}
+
+/**
+ * Create a ROOT file by merging multiple input ROOT files using 'hadd' command.
+ *
+ * This function generates and runs the 'hadd' command to merge multiple input ROOT files
+ * into a single output ROOT file at the specified path.
+ *
+ * @author Burak
+ * @param hadd_path The path where the merged ROOT file will be saved.
+ * @param input_path The path containing the input ROOT files to be merged.
+ */
+void hadd_creator(string hadd_path, string input_path)
+{
+    string hadd_command = "hadd -f " + hadd_path + " `find " + input_path + " -type f -name '*.root'`";
+
+    if (std::filesystem::exists(hadd_path))
+    {
+        string option_delete;
+        cout << RED << "ERROR: ROOT FILE EXISTS" << RESET << endl;
+        cout << "   DELETE and CONTINUE? "
+             << "y/n ";
+        getline(cin, option_delete);
+        if (option_delete == "y" || option_delete == "Y")
+        {
+            remove(hadd_path.c_str());
+        }
+
+        else
+        {
+            return;
+        }
+    }
+
+    int systemErr = system(hadd_command.c_str()); // Merge all ROOT Files
+    if (systemErr == -1)
+    {
+        cout << RED << "ERROR - COULD NOT MERGE ROOT FILES" << endl;
+    }
+}
+
+/**
+ * Find the intersection of two integer vectors.
+ *
+ * This function computes the intersection of two integer vectors and returns a new vector
+ * containing the common elements between the two input vectors.
+ *
+ * @author Burak
+ * @param first The first integer vector.
+ * @param second The second integer vector.
+ * @return A vector containing the common elements of the input vectors.
+ */
+vector<int> filter_intersector(vector<int> first, vector<int> second)
+{
+    int n1 = first.size();
+    int n2 = second.size();
+    vector<int> v(n1 + n2);
+    vector<int>::iterator it;
+    sort(first.begin(), first.end());
+    sort(second.begin(), second.end());
+
+    it = set_intersection(first.begin(), first.end(), second.begin(), second.end(), v.begin());
+    v.resize(it - v.begin());
+    return v;
+}
+
+/**
+ * Reads data from an input file stream and generates a matrix of double values.
+ *
+ * This function takes an input file stream as an argument and reads data line by line
+ * from the file. Each line is treated as a row of elements, which are space-separated.
+ * The function then generates a matrix of double values from the read data. The matrix
+ * is represented as a vector of vectors of double values. Transpose of the matrix is returned.
+ *
+ * @author Hazal
+ * @param thefile An input file stream containing data to be read.
+ * @return A transpose matrix of double values, represented as a vector of vectors.
+ */
+vector<vector<double>> reader(ifstream &thefile)
+{
+    string line;
+    vector<vector<string>> matrix;
+    vector<vector<double>> empty;
+    int n_rows = 0;
+    int n_columns = 0;
+
+    while (getline(thefile, line))
+    {
+        istringstream ss(line);
+        string element;
+        vector<string> row;
+
+        while (ss >> element)
+        {
+            row.push_back(element);
+        }
+        matrix.push_back(row);
+        n_rows++;
+        if (n_columns == 0)
+        {
+            n_columns = row.size();
+        }
+    }
+
+    // Transpose the matrix:
+    vector<vector<double>> transpose(n_columns, vector<double>(n_rows));
+    for (int i = 0; i < n_columns; i++)
+    {
+        for (int j = 0; j < n_rows; j++)
+        {
+            transpose[i][j] = stof(matrix[j][i]); // convert string to float values
+        }
+    }
+
+    cout << "\n"
+            " "
+            "# of rows      :  "
+         << n_rows << "\n"
+         << " "
+            "# of columns   :  "
+         << n_columns << "\n"
+         << endl;
+
+    return transpose;
+}
+
+/**
  * Reads histogram data from an input file and returns a matrix of strings.
  *
  * This function reads histogram data from the provided input file, where each line represents
@@ -269,85 +378,6 @@ vector<vector<string>> hist_reader(ifstream &thefile)
     }
 
     return matrix;
-}
-
-/**
- * Create histograms for certain combinations of data and filters.
- *
- * This function creates histograms based on the provided data and filters. It generates a histogram
- * for each combination of data and filter, where each histogram represents a specific histogram type.
- * The histograms are stored in PDF files with names determined by the histogram type and filter names.
- * The function supports specifying the number of bins for the histograms through bin division.
- *
- * @author Burak
- * @param data A matrix of data values where each row represents a data point and its associated standard deviation.
- * @param filters A vector of filter strings that provide additional information for histogram naming.
- * @param hist_type A string indicating the type of histogram to be created.
- * @param output_path The path where the generated histograms will be saved as PDF files.
- * @param bin_division The division factor used to determine the number of bins in the histograms.
- * @return None.
- */
-void compare_hist(vector<vector<double>> data, vector<string> filters, string hist_type, string output_path, string bin_division)
-{
-    string histo_name = hist_type;
-
-    for (int i = 0; i < int(filters.size()); i++)
-    {
-        string filtername = splitter(filters[i], ":")[1];
-        histo_name.append("_" + filtername);
-    }
-    std::replace(histo_name.begin(), histo_name.end(), '/', '-');
-
-    vector<double> temp_data;
-    vector<double> temp_std;
-    for (int i = 0; i < int(data.size()); ++i)
-    {
-        temp_data.push_back(abs(data[i][0]));
-        temp_std.push_back(abs(data[i][1]));
-    }
-
-    double min_val = *min_element(temp_data.begin(), temp_data.end());
-    double max_val = *max_element(temp_data.begin(), temp_data.end());
-
-    int bin_num = 100;
-    TCanvas *c_hist = new TCanvas("c1", "c1", 200, 10, 600, 400);
-    TH1 *histo = new TH1D(histo_name.c_str(), histo_name.c_str(), bin_num, min_val, max_val);
-    for (int i = 0; i < int(temp_data.size()); ++i)
-    {
-        histo->Fill(temp_data[i]);
-    }
-
-    double std = histo->GetStdDev();
-    delete histo;
-
-    // bin_num = int((max_val - min_val) / std);
-    bin_num = int(temp_data.size() / stoi(bin_division));
-
-    TH1 *new_histo = new TH1D(histo_name.c_str(), histo_name.c_str(), bin_num, min_val - 2 * std, max_val + 2 * std);
-    for (int i = 0; i < int(temp_data.size()); ++i)
-    {
-        new_histo->Fill(temp_data[i]);
-    }
-
-    if (hist_type == "IntegralMean")
-    {
-        new_histo->SetXTitle("Weber(Vs)");
-    }
-    else if (hist_type == "PeakVoltMean")
-    {
-        new_histo->SetXTitle("Voltage(V)");
-    }
-    else
-    {
-        new_histo->SetXTitle("Time(s)");
-    }
-
-    new_histo->Draw();
-
-    string histo_file_name = output_path + histo_name + ".pdf";
-    c_hist->Print(histo_file_name.c_str());
-
-    delete c_hist;
 }
 
 /**
@@ -440,112 +470,190 @@ string concatenate_vec(string head_string, vector<string> vector_line, string fi
 }
 
 /**
- * Create a ROOT file by merging multiple input ROOT files using 'hadd' command.
- *
- * This function generates and runs the 'hadd' command to merge multiple input ROOT files
- * into a single output ROOT file at the specified path.
+ * Generate histogram with labels on the x-axis
  *
  * @author Burak
- * @param hadd_path The path where the merged ROOT file will be saved.
- * @param input_path The path containing the input ROOT files to be merged.
+ * @param names
+ * @param values
+ * @param hist_name
+ * @return TCanvas*
  */
-void hadd_creator(string hadd_path, string input_path)
+TCanvas *hist_label(vector<string> names, vector<double> values, string hist_name)
 {
-    string hadd_command = "hadd -f " + hadd_path + " `find " + input_path + " -type f -name '*.root'`";
-
-    if (std::filesystem::exists(hadd_path))
+    int nx = values.size();
+    TCanvas *c1 = new TCanvas("c1", "c1", 10, 10, 900, 500);
+    c1->SetGrid();
+    c1->SetBottomMargin(0.2);
+    TH1D *h = new TH1D(hist_name.c_str(), hist_name.c_str(), nx, 0, nx);
+    h->SetStats(0);
+    h->SetFillColor(30);
+    for (int i = 0; i < nx; i++)
     {
-        string option_delete;
-        cout << RED << "ERROR: ROOT FILE EXISTS" << RESET << endl;
-        cout << "   DELETE and CONTINUE? "
-             << "y/n ";
-        getline(cin, option_delete);
-        if (option_delete == "y" || option_delete == "Y")
-        {
-            remove(hadd_path.c_str());
-        }
+        vector<string> new_name_vec = splitter(names[i], "_");
+        string new_name = concatenate_vec("",new_name_vec,"",""," ");
+        h->Fill(new_name.c_str(), values[i]);
+    }
+    h->Draw("HIST");
+    return c1;
+}
 
-        else
-        {
-            return;
-        }
+/**
+ * Write histogram results and errors to output files.
+ *
+ * This function takes the paths to histogram data, data format, and the calculated results along with
+ * associated errors. It generates output files to store histogram results and errors. The function also
+ * creates directories for the output files based on the current working directory.
+ *
+ * @author Burak
+ * @param data_path The path to the input histogram data.
+ * @param data_format_path The path to the data format file.
+ * @param results A vector containing calculated histogram results as strings.
+ * @param errors A vector containing error messages as strings.
+ */
+void histogram_result_writer(string data_path, string data_format_path, vector<string> results, vector<string> errors)
+{
+    string output_hist_path = string(fs::current_path()) + "/outputs/data/";
+    string outputname = splitter(data_path, "/").back();
+    fs::create_directories(output_hist_path);
+
+    string output_hist = output_hist_path + outputname + "_hist_result.txt";
+    ofstream Out_hist(output_hist.c_str());
+
+    string data_format;
+    ifstream data_format_reader(data_format_path);
+    string temp_data_format;
+    temp_data_format = "Entries,FallMean,RiseMean,IntegralMean,PeakVoltMean,PeakTimeMean,FallStd,RiseStd,IntegralStd,PeakVoltStd,PeakTimeStd,";
+
+    Out_hist << temp_data_format;
+
+    while (getline(data_format_reader, data_format)) // Write Data Format
+    {
+        Out_hist << data_format;
     }
 
-    int systemErr = system(hadd_command.c_str()); // Merge all ROOT Files
-    if (systemErr == -1)
+    for (int k = 0; k < int(results.size()); ++k) // Write Results
     {
-        cout << RED << "ERROR - COULD NOT MERGE ROOT FILES" << endl;
+        Out_hist << "\n"
+                 << results[k];
+    }
+
+    cout << GREEN << "Histogram Result Saved to The Directory: " << RESET << output_hist << endl;
+    Out_hist.close();
+    data_format_reader.close();
+
+    if (errors.size() > 0) // Write Errors as TXT
+    {
+        string output_errors = output_hist_path + outputname + "_errors.txt";
+        ofstream Out_errors(output_errors.c_str());
+
+        for (int k = 0; k < int(errors.size()); ++k)
+        {
+            Out_errors << errors[k] << "\n";
+        }
+
+        cout << RED << "Errors Saved to the Directory: " << RESET << output_errors << endl;
+        Out_errors.close();
     }
 }
 
 /**
- * Find the intersection of two integer vectors.
- *
- * This function computes the intersection of two integer vectors and returns a new vector
- * containing the common elements between the two input vectors.
+ * Generate histogram name depending on its filters and type
  *
  * @author Burak
- * @param first The first integer vector.
- * @param second The second integer vector.
- * @return A vector containing the common elements of the input vectors.
+ * @param filters
+ * @param hist_type
+ * @return string
  */
-vector<int> filter_intersector(vector<int> first, vector<int> second)
+string histo_namer(vector<string> filters, string hist_type)
 {
-    int n1 = first.size();
-    int n2 = second.size();
-    vector<int> v(n1 + n2);
-    vector<int>::iterator it;
-    sort(first.begin(), first.end());
-    sort(second.begin(), second.end());
+    string histo_name = hist_type;
 
-    it = set_intersection(first.begin(), first.end(), second.begin(), second.end(), v.begin());
-    v.resize(it - v.begin());
-    return v;
+    for (int i = 0; i < int(filters.size()); i++)
+    {
+        string filtername = splitter(filters[i], ":")[1];
+        histo_name.append("_" + filtername);
+    }
+    std::replace(histo_name.begin(), histo_name.end(), '/', '-');
+
+    return histo_name;
 }
 
 /**
- * Find available options for comparison in a given column of data.
+ * Create histograms for certain combinations of data and filters.
  *
- * This function extracts and returns a vector of available options for comparison from a specified
- * column of data. It can optionally filter the options based on a set of positions or consider
- * the entire data set if an empty position vector is provided.
+ * This function creates histograms based on the provided data and filters. It generates a histogram
+ * for each combination of data and filter, where each histogram represents a specific histogram type.
+ * The histograms are stored in PDF files with names determined by the histogram type and filter names.
+ * The function supports specifying the number of bins for the histograms through bin division.
  *
  * @author Burak
- * @param data A 2D vector containing the data table.
- * @param column The index of the column from which to extract options.
- * @param positions A vector of positions to filter data rows (optional).
- * @return A vector containing the unique available options for comparison.
+ * @param data A matrix of data values where each row represents a data point and its associated standard deviation.
+ * @param filters A vector of filter strings that provide additional information for histogram naming.
+ * @param hist_type A string indicating the type of histogram to be created.
+ * @param output_path The path where the generated histograms will be saved as PDF files.
+ * @param bin_division The division factor used to determine the number of bins in the histograms.
+ * @return vector<double>.
  */
-vector<string> compare_available_options(vector<vector<string>> data, int column, vector<int> positions)
+vector<double> compare_hist(vector<vector<double>> data, vector<string> filters, string hist_type, string output_path, string bin_division)
 {
-    vector<string> v;
-    int n;
-
-    if (positions.size() == 0)
+    vector<double> values;
+    string histo_name = histo_namer(filters, hist_type);
+    vector<double> temp_data;
+    vector<double> temp_std;
+    for (int i = 0; i < int(data.size()); ++i)
     {
-        n = int(data.size());
-        for (int i = 1; i < n; i++)
-        {
-            v.push_back(data[i][column]);
-        }
+        temp_data.push_back(abs(data[i][0]));
+        temp_std.push_back(abs(data[i][1]));
+    }
+    int n = temp_data.size();
+
+    double min_val = *min_element(temp_data.begin(), temp_data.end());
+    double max_val = *max_element(temp_data.begin(), temp_data.end());
+
+    int bin_num = 100;
+    TCanvas *c_hist = new TCanvas("c1", "c1", 200, 10, 600, 400);
+    TH1 *histo = new TH1D(histo_name.c_str(), histo_name.c_str(), bin_num, min_val, max_val);
+    for (int i = 0; i < n; ++i)
+    {
+        histo->Fill(temp_data[i]);
     }
 
+    double std = histo->GetStdDev();
+    double mean = histo->GetMean();
+    values.push_back(n);
+    values.push_back(mean);
+    values.push_back(std);
+    delete histo;
+
+    // bin_num = int((max_val - min_val) / std);
+    bin_num = int(n / stoi(bin_division));
+
+    TH1 *new_histo = new TH1D(histo_name.c_str(), histo_name.c_str(), bin_num, min_val - 2 * std, max_val + 2 * std);
+    for (int i = 0; i < n; ++i)
+    {
+        new_histo->Fill(temp_data[i]);
+    }
+
+    if (hist_type == "IntegralMean")
+    {
+        new_histo->SetXTitle("Weber(Vs)");
+    }
+    else if (hist_type == "PeakVoltMean")
+    {
+        new_histo->SetXTitle("Voltage(V)");
+    }
     else
     {
-        n = int(positions.size());
-        for (int i = 0; i < n; i++)
-        {
-            int row = positions[i];
-            v.push_back(data[row][column]);
-        }
+        new_histo->SetXTitle("Time(s)");
     }
 
-    sort(v.begin(), v.end());
-    vector<string>::iterator it;
-    it = unique(v.begin(), v.end());
-    v.resize(distance(v.begin(), it));
+    new_histo->Draw();
 
-    return v;
+    string histo_file_name = output_path + histo_name + ".pdf";
+    c_hist->Print(histo_file_name.c_str());
+    delete c_hist;
+
+    return values;
 }
 
 /**
@@ -560,6 +668,7 @@ vector<string> compare_available_options(vector<vector<string>> data, int column
  */
 void custom_compare(string hist_path)
 {
+
     gErrorIgnoreLevel = kFatal; // Verbose Mode
 
     // Find Date of the Source File:
@@ -706,6 +815,8 @@ void custom_compare(string hist_path)
 void standard_compare(string hist_path)
 {
     gErrorIgnoreLevel = kFatal; // Verbose Mode
+    vector<vector<double>> values;
+    vector<string> names;
 
     // Find Date of the Source File:
     vector<string> temp_hist_data_source = splitter(hist_path, "/");
@@ -718,14 +829,12 @@ void standard_compare(string hist_path)
     hist_file->open(hist_path.c_str());
     hist_output = hist_reader(*hist_file);
 
-    // Generate Result For All Sources, Scintillators and Thresholds:
+    // Generate Result For All Sources and Scintillators:
     int position_source = find_position(hist_output[0], "Source");
     int position_scintillator = find_position(hist_output[0], "Scintillator");
-    int position_th = find_position(hist_output[0], "Threshold");
 
     vector<string> option_source = compare_available_options(hist_output, position_source, {});
     vector<string> option_scintillator = compare_available_options(hist_output, position_scintillator, {});
-    vector<string> option_th = compare_available_options(hist_output, position_th, {});
 
     // Print All Scintillator and Source Options:
     cout << YELLOW << "Sources: " << RESET;
@@ -739,12 +848,6 @@ void standard_compare(string hist_path)
     {
         cout << option_scintillator[i] << ", ";
     }
-
-    cout << YELLOW << "\nThresholds: " << RESET;
-    for (int i = 0; i < int(option_th.size()); i++)
-    {
-        cout << option_th[i] << ", ";
-    }
     cout << "\n";
 
     // Ask for Bin Division:
@@ -756,116 +859,92 @@ void standard_compare(string hist_path)
     {
         for (int iscintillator = 0; iscintillator < int(option_scintillator.size()); ++iscintillator)
         {
-            for (int ith = 0; ith < int(option_th.size()); ++ith)
+            //  Find Source-Scintillator Combination Positions:
+            string filter_source = "Source:" + option_source[isource];
+            string filter_scintillator = "Scintillator:" + option_scintillator[iscintillator];
+
+            vector<int> source_position = filter(hist_output, filter_source);
+            vector<int> source_scintillator = filter(hist_output, filter_scintillator);
+            vector<int> positions = filter_intersector(source_position, source_scintillator);
+
+            if (positions.size() == 0)
             {
-                // Find Source-Scintillator Combination Positions:
-                string filter_source = "Source:" + option_source[isource];
-                string filter_scintillator = "Scintillator:" + option_scintillator[iscintillator];
-                string filter_th = "Threshold:" + option_th[ith];
+                cout << RED << "ERROR - NO COMBINATIONS FOR: " << option_source[isource] << " - " << option_scintillator[iscintillator] << RESET << endl;
+            }
 
-                vector<int> source_position = filter(hist_output, filter_source);
-                vector<int> source_scintillator = filter(hist_output, filter_scintillator);
-                vector<int> source_th = filter(hist_output, filter_th);
-                vector<int> positions = filter_intersector(source_position, source_scintillator);
-                positions = filter_intersector(positions, source_th);
+            else
+            {
+                // Create Directories and Initialize Root File:
+                string compare_root_path = string(fs::current_path()) + "/outputs/compare/" + hist_data_source + "/" + option_source[isource] + "_" + option_scintillator[iscintillator] + "/";
+                string compare_root_name = compare_root_path + "compare_hist.root";
+                fs::create_directories(compare_root_path.c_str());
+                TFile *hist_root_file = new TFile(compare_root_name.c_str(), "RECREATE");
 
-                if (positions.size() == 0)
+                for (int t = 1; t < 6; ++t) // Generate 5 Histograms
                 {
-                    cout << RED << "ERROR - NO COMBINATIONS FOR: " << option_source[isource] << " - " << option_scintillator[iscintillator] << " - " << option_th[ith] << RESET << endl;
-                }
-
-                else
-                {
-                    // Create Directories and Initialize Root File:
-                    string compare_root_path = string(fs::current_path()) + "/outputs/compare/" + hist_data_source + "/" + option_source[isource] + "_" + option_scintillator[iscintillator] + "_" + option_th[ith] + "/";
-                    string compare_root_name = compare_root_path + "compare_hist.root";
-                    fs::create_directories(compare_root_path.c_str());
-                    TFile *hist_root_file = new TFile(compare_root_name.c_str(), "RECREATE");
-
-                    for (int t = 1; t < 6; ++t) // Generate 5 Histograms
+                    vector<vector<double>> hist_values;
+                    for (int k = 0; k < int(positions.size()); ++k)
                     {
-                        vector<vector<double>> hist_values;
-                        for (int k = 0; k < int(positions.size()); ++k)
-                        {
-                            int row = positions[k];
-                            vector<double> temp_hist_values;
-                            double value = stof(hist_output[row][t]);
-                            double error = stof(hist_output[row][t + 5]);
-                            temp_hist_values.push_back(value);
-                            temp_hist_values.push_back(error);
-                            hist_values.push_back(temp_hist_values);
-                        }
-                        string hist_type = hist_output[0][t];
-                        vector<string> filters = {filter_scintillator, filter_source};
-                        compare_hist(hist_values, filters, hist_type, compare_root_path, option_division);
+                        int row = positions[k];
+                        vector<double> temp_hist_values;
+                        double value = stof(hist_output[row][t]);
+                        double error = stof(hist_output[row][t + 5]);
+                        temp_hist_values.push_back(value);
+                        temp_hist_values.push_back(error);
+                        hist_values.push_back(temp_hist_values);
                     }
-                    hist_root_file->Write();
-                    delete hist_root_file;
-                    cout << GREEN << "RESULT SAVED TO THE DIRECTORY: " << RESET << compare_root_path << endl;
+                    string hist_type = hist_output[0][t];
+                    vector<string> filters = {filter_scintillator, filter_source};
+
+                    // Push Back Results:
+                    vector<double> value;
+                    string name;
+                    value = compare_hist(hist_values, filters, hist_type, compare_root_path, option_division);
+                    name = histo_namer(filters, "");
+                    values.push_back(value);
+                    names.push_back(name);
                 }
+                hist_root_file->Write();
+                delete hist_root_file;
+                cout << GREEN << "RESULT SAVED TO THE DIRECTORY: " << RESET << compare_root_path << endl;
             }
         }
     }
     delete hist_file;
-}
 
-/**
- * Write histogram results and errors to output files.
- *
- * This function takes the paths to histogram data, data format, and the calculated results along with
- * associated errors. It generates output files to store histogram results and errors. The function also
- * creates directories for the output files based on the current working directory.
- *
- * @author Burak
- * @param data_path The path to the input histogram data.
- * @param data_format_path The path to the data format file.
- * @param results A vector containing calculated histogram results as strings.
- * @param errors A vector containing error messages as strings.
- */
-void histogram_result_writer(string data_path, string data_format_path, vector<string> results, vector<string> errors)
-{
-    string output_hist_path = string(fs::current_path()) + "/outputs/data/";
-    string outputname = splitter(data_path, "/").back();
-    fs::create_directories(output_hist_path);
+    // Initialize:
+    int n = (values.size() + 1) / 5;
+    vector<vector<double>> value_groups = {{}, {}, {}, {}, {}};
+    vector<vector<string>> name_groups = {{}, {}, {}, {}, {}};
+    vector<string> pdf_names = {"FallTime(s)", "RiseTime(s)", "Integral(Vs)", "PeakVolt(V)", "PeakTime(s)"};
+    TFile *hist_result = new TFile("outputs/compare/result.root", "RECREATE");
 
-    string output_hist = output_hist_path + outputname + "_hist_result.txt";
-    ofstream Out_hist(output_hist.c_str());
-
-    string data_format;
-    ifstream data_format_reader(data_format_path);
-    string temp_data_format;
-    temp_data_format = "Entries,FallMean,RiseMean,IntegralMean,PeakVoltMean,PeakTimeMean,FallStd,RiseStd,IntegralStd,PeakVoltStd,PeakTimeStd,";
-
-    Out_hist << temp_data_format;
-
-    while (getline(data_format_reader, data_format)) // Write Data Format
+    // Group Values of Their Types:
+    for (int i = 0; i < n; i++)
     {
-        Out_hist << data_format;
+        value_groups[0].push_back(values[i * 5 + 0][1]);
+        value_groups[1].push_back(values[i * 5 + 1][1]);
+        value_groups[2].push_back(values[i * 5 + 2][1]);
+        value_groups[3].push_back(values[i * 5 + 3][1]);
+        value_groups[4].push_back(values[i * 5 + 4][1]);
+
+        name_groups[0].push_back(names[i * 5 + 0]);
+        name_groups[1].push_back(names[i * 5 + 1]);
+        name_groups[2].push_back(names[i * 5 + 2]);
+        name_groups[3].push_back(names[i * 5 + 3]);
+        name_groups[4].push_back(names[i * 5 + 4]);
     }
 
-    for (int k = 0; k < int(results.size()); ++k) // Write Results
+    // Create Histograms for Each Group:
+    for (int i = 0; i < 5; i++)
     {
-        Out_hist << "\n"
-                 << results[k];
+        string pdf_name = "outputs/compare/" + pdf_names[i] + ".pdf";
+        hist_label(name_groups[i], value_groups[i], pdf_names[i])->Print(pdf_name.c_str());
+        string current_path = fs::current_path();
+        cout << GREEN << "COMPARE RESULT SAVED TO THE DIRECTORY: " << RESET << string(fs::current_path()) + "/outputs/compare/" << endl;
     }
-
-    cout << GREEN << "Histogram Result Saved to The Directory: " << RESET << output_hist << endl;
-    Out_hist.close();
-    data_format_reader.close();
-
-    if (errors.size() > 0) // Write Errors as TXT
-    {
-        string output_errors = output_hist_path + outputname + "_errors.txt";
-        ofstream Out_errors(output_errors.c_str());
-
-        for (int k = 0; k < int(errors.size()); ++k)
-        {
-            Out_errors << errors[k] << "\n";
-        }
-
-        cout << RED << "Errors Saved to the Directory: " << RESET << output_errors << endl;
-        Out_errors.close();
-    }
+    hist_result->Write();    
+    delete hist_result;
 }
 
 /**
