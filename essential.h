@@ -1,5 +1,4 @@
 // COLORS
-
 #ifndef COLORS
 #define COLORS
 
@@ -16,7 +15,6 @@
 #endif
 
 // BASIC LIBRARIES
-
 #ifndef basich
 #define basich
 
@@ -37,7 +35,6 @@
 #endif
 
 // ROOT HEADERS
-
 #ifndef rooth
 #define rooth
 
@@ -62,7 +59,6 @@
 #endif
 
 // CONSTANTS
-
 #ifndef consth
 #define consth
 
@@ -71,6 +67,8 @@ const std::string data_path_h = std::string(std::filesystem::current_path()) + "
 const std::string default_data_format_path_h = std::string(std::filesystem::current_path()) + "/DefaultFormat.txt";
 const std::string custom_data_format_path_h = std::string(std::filesystem::current_path()) + "/CustomFormat.txt";
 const std::string head_data_format_h = "Entries,FallMean,RiseMean,IntegralMean,PeakVoltMean,PeakTimeMean,FallStd,RiseStd,IntegralStd,PeakVoltStd,PeakTimeStd,";
+const std::string browser_h = "root -l --web=server:8899 $ROOTSYS/tutorials/v7/browser.cxx";
 const double sampling_time_h = 2.5e-9;
 const int filter_size_h = 1000;
+
 #endif

@@ -17,7 +17,7 @@ int main()
     std::string option;
     double ns;
 
-    cout << YELLOW << "Type 'compare', 'hadd' or Press ENTER\n>" << RESET;
+    cout << YELLOW << "Type 'compare', 'hadd', 'browser' or Press ENTER\n>" << RESET;
     getline(cin, option);
 
     if (option == "compare" || option == "c") // Compare an existing histogram result file
@@ -71,6 +71,15 @@ int main()
         option_hadd_output_path = option_hadd_input_path + "result.root";
         hadd_creator(option_hadd_output_path, option_hadd_input_path);
         return 0;
+    }
+
+    else if (option == "browser" || option == "b")
+    {
+        int systemErr = system(browser_h.c_str()); // Start Browser
+        if (systemErr == -1)
+        {
+            cout << RED << "ERROR - COULD NOT MERGE ROOT FILES" << endl;
+        }
     }
 
     else // Analyse

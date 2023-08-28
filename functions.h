@@ -44,12 +44,12 @@ vector<vector<string>> hist_reader(ifstream &thefile)
  * @param hist_name
  * @return TCanvas*
  */
-TCanvas *hist_label(vector<string> names, vector<double> values, string hist_name)
+TCanvas *hist_label(vector<string> names, vector<double> values, string hist_name, int margin)
 {
     int nx = values.size();
     TCanvas *c1 = new TCanvas("c1", "c1", 10, 10, 900, 500);
     c1->SetGrid();
-    c1->SetBottomMargin(0.5);
+    c1->SetBottomMargin(0.15 * margin);
     TH1D *h = new TH1D(hist_name.c_str(), hist_name.c_str(), nx, 0, nx);
     h->SetStats(0);
     h->SetFillColor(30);
@@ -162,7 +162,6 @@ string histogram_namer(vector<string> filters, string hist_type)
  */
 vector<double> compare_hist(vector<vector<double>> data, vector<string> filters, string hist_type, string output_path, string bin_division)
 {
-    vector<double> values;
     string histo_name = histogram_namer(filters, hist_type);
     vector<double> temp_data;
     vector<double> temp_std;
@@ -186,9 +185,7 @@ vector<double> compare_hist(vector<vector<double>> data, vector<string> filters,
 
     double std = histo->GetStdDev();
     double mean = histo->GetMean();
-    values.push_back(n);
-    values.push_back(mean);
-    values.push_back(std);
+    vector<double> values = {n*1.0, mean, std};
     delete histo;
 
     // bin_num = int((max_val - min_val) / std);
@@ -260,7 +257,7 @@ void custom_compare(string hist_path)
         string option_type;
         vector<string> availables = compare_available_options(hist_output, i, filtered_positions);
 
-        string availables_msg = concatenate_vec("",availables,"","",", ");
+        string availables_msg = concatenate_vec("", availables, "", "", ", ");
         cout << BLUE << hist_output[0][i] << " Options: " << RESET << availables_msg << YELLOW << "\n>" << RESET;
         getline(cin, option_type);
 
@@ -313,7 +310,7 @@ void custom_compare(string hist_path)
     }
 
     else
-    {   
+    {
         string filters_msg = concatenate_vec("", filters, "", "", ",");
         cout << GREEN << filtered_positions.size() << " Entries for Combination: " << RESET << filters_msg << endl;
 
@@ -399,10 +396,18 @@ void standard_compare(string hist_path)
     for (size_t i = 0; i < types.size(); i++)
     {
         int position = find_position(hist_output[0], types[i]);
-        vector<string> values = compare_available_options(hist_output, position, {});
-        values_types.push_back(values);
+        vector<string> values_type = compare_available_options(hist_output, position, {});
+        string option_values;
+        string values_msg = concatenate_vec("", values_type, "", "", ",");
+        cout << BLUE << types[i] << " Values (Press ENTER to Select All): " << RESET << values_msg << YELLOW << "\n>" << RESET;
+        getline(cin, option_values);
+        if (option_values != "")
+        {
+            values_type = splitter(option_values, ",");
+        }
+        values_types.push_back(values_type);
 
-        string type_msg = concatenate_vec("", values, "", "", ",");
+        string type_msg = concatenate_vec("", values_type, "", "", ",");
         cout << BLUE << types[i] << ": " << RESET << type_msg << endl;
     }
 
@@ -444,7 +449,7 @@ void standard_compare(string hist_path)
         if (positions.size() == 0)
         {
             string error_msg = concatenate_vec("", type_filters, "", "", ",");
-            cout << RED << "ERROR - NO COMBINATIONS FOR: " << RESET << error_msg  << endl;
+            cout << RED << "ERROR - NO COMBINATIONS FOR: " << RESET << error_msg << endl;
             continue;
         }
 
@@ -499,12 +504,8 @@ void standard_compare(string hist_path)
     int n = (values.size() + 1) / 5;
     vector<vector<double>> value_groups = {{}, {}, {}, {}, {}};
     vector<vector<string>> name_groups = {{}, {}, {}, {}, {}};
-    vector<string> pdf_names = {"FallTime(s)", "RiseTime(s)", "Integral(Vs)", "PeakVolt(V)", "PeakTime(s)"};
-    string hist_result_path = "outputs/compare/";
-    for (size_t i = 0; i < types.size(); i++)
-    {
-        hist_result_path.append(types[i] + "_");
-    }
+    vector<string> pdf_names = {"FallTime", "RiseTime", "Integral", "PeakVolt", "PeakTime"};
+    string hist_result_path = concatenate_vec("outputs/compare/", types, "", "", "_");
     string root_result_path = hist_result_path + "result.root";
     TFile *hist_result = new TFile(root_result_path.c_str(), "RECREATE");
 
@@ -528,7 +529,7 @@ void standard_compare(string hist_path)
     for (int i = 0; i < 5; i++)
     {
         string pdf_name = hist_result_path + pdf_names[i] + ".pdf";
-        hist_label(name_groups[i], value_groups[i], pdf_names[i])->Print(pdf_name.c_str());
+        hist_label(name_groups[i], value_groups[i], pdf_names[i], int(types.size()))->Print(pdf_name.c_str());
         string current_path = fs::current_path();
         cout << GREEN << "COMPARE RESULT (PDF) SAVED TO THE DIRECTORY: " << RESET << pdf_name << endl;
     }
