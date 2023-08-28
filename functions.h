@@ -1,357 +1,12 @@
+#ifndef functionsh
+#define functionsh
+
 #include "essential.h"
+#include "utilities.h"
 #include <H5Cpp.h>
 using namespace H5;
 using namespace std;
 namespace fs = std::filesystem;
-
-/**
- * Displays a customized interface logo on the console.
- *
- * This function prints a visually appealing logo with the title "SAT-Force Analysis Interface"
- * on the console. The logo is generated using a combination of colored and plain text,
- * creating a distinct appearance.
- *
- * @author Hazal
- *
- */
-void interface()
-{
-    cout << BOLDORANGE << "\n"
-         << "_____________________________________________"
-         << "\n"
-         << "                                             "
-         << "\n"
-         << "    _____      _______            ______     "
-         << "\n"
-         << "   / ____|  /\\|__   __|          |  ____|   "
-         << "\n"
-         << "  | (___   /  \\  | |     ______  | |__      "
-         << "\n"
-         << "   \\___ \\ / /\\ \\ | |    |______| |  __|  "
-         << "\n"
-         << "   ____) / ____ \\| |             | |        "
-         << "\n"
-         << "  |_____/_/    \\_\\_|             |_|       "
-         << "\n"
-         << "                                             "
-         << "\n"
-         << RESET << ORANGE
-         << "        SAT-Force Analysis Interface         "
-         << "\n"
-         << RESET << BOLDORANGE
-         << "_____________________________________________"
-         << "\n"
-         << RESET << endl;
-}
-
-/**
- * Splits a given string into multiple substrings based on a specified delimiter.
- *
- * This function takes a string and a delimiter as input and splits the input
- * string into multiple substrings using the delimiter as a separator. The
- * substrings are stored in a vector of strings and returned.
- *
- * @author Burak
- * @param name The input string to be split.
- * @param DELIMITER The delimiter used to separate the substrings.
- * @return A vector of strings containing the substrings after splitting.
- */
-vector<string> splitter(string name, string DELIMITER)
-{
-    vector<string> name_split;
-    char *token = strtok(name.data(), DELIMITER.c_str());
-    while (token != NULL)
-    {
-        name_split.push_back(token);
-        token = strtok(NULL, DELIMITER.c_str());
-    }
-    delete token;
-    return name_split;
-}
-
-/**
- * Finds all TXT and H5 files in a specified directory.
- *
- * This function searches the specified directory for files with the extensions
- * ".txt" and ".h5". It uses the 'find' command to perform the search and writes
- * the paths of the found files to a temporary text file. The path of the temporary
- * file is returned.
- *
- * @author Burak
- * @param path The path of the directory in which to search for files.
- * @return The path of the temporary text file containing the list of found files.
- */
-string file_selector(string path)
-{
-    string found_files_path = "temp_FoundFiles.txt";
-    string command = "find " + path + " -type f -iname \\*.txt -o -type f -iname \\*.h5 > " + found_files_path;
-    int systemErr = system(command.c_str());
-    if (systemErr == -1)
-    {
-        cout << RED << "ERROR - COULD NOT FOUND TXT FILES IN THE PATH" << endl;
-    }
-    return found_files_path;
-}
-
-/**
- * Counts the number of lines in a text file.
- *
- * This function reads the specified text file line by line and increments a
- * counter for each line read. It returns the total number of lines in the file.
- *
- * @author Burak
- * @param path The path of the text file for which to count the lines.
- * @return The total number of lines in the specified text file.
- */
-int line_counter(string path)
-{
-    unsigned int lines = 0;
-
-    std::ifstream inputfile(path);
-    std::string filename;
-    while (std::getline(inputfile, filename))
-    {
-        lines += 1;
-    }
-    return lines;
-}
-
-/**
- * Checks if a given string represents a valid number.
- *
- * This function attempts to convert the given string to a double using the
- * strtod function. If the conversion is successful and the entire string has
- * been processed, and the resulting value is not infinity, the function returns true.
- * Otherwise, it returns false.
- *
- * @author Burak
- * @param s The string to be checked for numeric validity.
- * @return True if the string represents a valid number, false otherwise.
- */
-bool is_number(const std::string &s)
-{
-    char *end = nullptr;
-    double val = strtod(s.c_str(), &end);
-    return end != s.c_str() && *end == '\0' && val != HUGE_VAL;
-}
-
-/**
- * Finds the position of the first occurrence of a specified string in a vector of strings.
- *
- * This function searches for the first occurrence of the provided search string in the given
- * vector of strings and returns the position (index) where the string is found. If the string
- * is not found, the function returns -1.
- *
- * @author Burak
- * @param vec_string A vector of strings in which the search will be performed.
- * @param search_string The string to search for within the vector.
- * @return The position (index) of the first occurrence of the search string, or -1 if not found.
- */
-int find_position(vector<string> vec_string, string search_string)
-{
-    int position = -1;
-
-    for (int i = 0; i < int(vec_string.size()); ++i)
-    {
-        if (vec_string[i] == search_string)
-        {
-            return i;
-        }
-    }
-    return position;
-}
-
-/**
- * Computes the summation of elements in a vector of doubles starting from a specified index.
- *
- * This function calculates the sum of elements in the provided vector of doubles, starting from
- * the specified index 'first' and summing up to the end of the vector. The result is the sum of
- * the elements within the specified range.
- *
- * @author Burak
- * @param input A vector of double values for which the summation will be performed.
- * @param first The index from which to start the summation (inclusive).
- * @return The summation of elements in the vector starting from the specified index.
- */
-double summation_vec(vector<double> input, int first)
-{
-    int n = input.size();
-    double sum = 0;
-    for (int i = first; i < n; ++i)
-    {
-        sum += input[i];
-    }
-    return sum;
-}
-
-/**
- * Find available options for comparison in a given column of data.
- *
- * This function extracts and returns a vector of available options for comparison from a specified
- * column of data. It can optionally filter the options based on a set of positions or consider
- * the entire data set if an empty position vector is provided.
- *
- * @author Burak
- * @param data A 2D vector containing the data table.
- * @param column The index of the column from which to extract options.
- * @param positions A vector of positions to filter data rows (optional).
- * @return A vector containing the unique available options for comparison.
- */
-vector<string> compare_available_options(vector<vector<string>> data, int column, vector<int> positions)
-{
-    vector<string> v;
-    int n;
-
-    if (positions.size() == 0)
-    {
-        n = int(data.size());
-        for (int i = 1; i < n; i++)
-        {
-            v.push_back(data[i][column]);
-        }
-    }
-
-    else
-    {
-        n = int(positions.size());
-        for (int i = 0; i < n; i++)
-        {
-            int row = positions[i];
-            v.push_back(data[row][column]);
-        }
-    }
-
-    sort(v.begin(), v.end());
-    vector<string>::iterator it;
-    it = unique(v.begin(), v.end());
-    v.resize(distance(v.begin(), it));
-
-    return v;
-}
-
-/**
- * Create a ROOT file by merging multiple input ROOT files using 'hadd' command.
- *
- * This function generates and runs the 'hadd' command to merge multiple input ROOT files
- * into a single output ROOT file at the specified path.
- *
- * @author Burak
- * @param hadd_path The path where the merged ROOT file will be saved.
- * @param input_path The path containing the input ROOT files to be merged.
- */
-void hadd_creator(string hadd_path, string input_path)
-{
-    string hadd_command = "hadd -f " + hadd_path + " `find " + input_path + " -type f -name '*.root'`";
-
-    if (std::filesystem::exists(hadd_path))
-    {
-        string option_delete;
-        cout << RED << "ERROR: ROOT FILE EXISTS" << RESET << endl;
-        cout << "   DELETE and CONTINUE? "
-             << "y/n ";
-        getline(cin, option_delete);
-        if (option_delete == "y" || option_delete == "Y")
-        {
-            remove(hadd_path.c_str());
-        }
-
-        else
-        {
-            return;
-        }
-    }
-
-    int systemErr = system(hadd_command.c_str()); // Merge all ROOT Files
-    if (systemErr == -1)
-    {
-        cout << RED << "ERROR - COULD NOT MERGE ROOT FILES" << endl;
-    }
-}
-
-/**
- * Find the intersection of two integer vectors.
- *
- * This function computes the intersection of two integer vectors and returns a new vector
- * containing the common elements between the two input vectors.
- *
- * @author Burak
- * @param first The first integer vector.
- * @param second The second integer vector.
- * @return A vector containing the common elements of the input vectors.
- */
-vector<int> filter_intersector(vector<int> first, vector<int> second)
-{
-    int n1 = first.size();
-    int n2 = second.size();
-    vector<int> v(n1 + n2);
-    vector<int>::iterator it;
-    sort(first.begin(), first.end());
-    sort(second.begin(), second.end());
-
-    it = set_intersection(first.begin(), first.end(), second.begin(), second.end(), v.begin());
-    v.resize(it - v.begin());
-    return v;
-}
-
-/**
- * Reads data from an input file stream and generates a matrix of double values.
- *
- * This function takes an input file stream as an argument and reads data line by line
- * from the file. Each line is treated as a row of elements, which are space-separated.
- * The function then generates a matrix of double values from the read data. The matrix
- * is represented as a vector of vectors of double values. Transpose of the matrix is returned.
- *
- * @author Hazal
- * @param thefile An input file stream containing data to be read.
- * @return A transpose matrix of double values, represented as a vector of vectors.
- */
-vector<vector<double>> reader(ifstream &thefile)
-{
-    string line;
-    vector<vector<string>> matrix;
-    vector<vector<double>> empty;
-    int n_rows = 0;
-    int n_columns = 0;
-
-    while (getline(thefile, line))
-    {
-        istringstream ss(line);
-        string element;
-        vector<string> row;
-
-        while (ss >> element)
-        {
-            row.push_back(element);
-        }
-        matrix.push_back(row);
-        n_rows++;
-        if (n_columns == 0)
-        {
-            n_columns = row.size();
-        }
-    }
-
-    // Transpose the matrix:
-    vector<vector<double>> transpose(n_columns, vector<double>(n_rows));
-    for (int i = 0; i < n_columns; i++)
-    {
-        for (int j = 0; j < n_rows; j++)
-        {
-            transpose[i][j] = stof(matrix[j][i]); // convert string to float values
-        }
-    }
-
-    cout << "\n"
-            " "
-            "# of rows      :  "
-         << n_rows << "\n"
-         << " "
-            "# of columns   :  "
-         << n_columns << "\n"
-         << endl;
-
-    return transpose;
-}
 
 /**
  * Reads histogram data from an input file and returns a matrix of strings.
@@ -381,95 +36,6 @@ vector<vector<string>> hist_reader(ifstream &thefile)
 }
 
 /**
- * Filter data based on a given filter type and value.
- *
- * This function filters a matrix of data based on a specified filter type and value.
- * It searches for the provided filter type in the header row of the data matrix,
- * then filters the data rows based on the matching filter value and entry size(>=1000).
- * The function returns a vector containing the positions of the filtered data rows.
- *
- * @author Burak
- * @param data A matrix of data values where each row represents a data point and its associated attributes.
- * @param filter A string containing the filter type and value in the format "type:value".
- * @return A vector of integers representing the positions of the filtered data rows.
- */
-vector<int> filter(vector<vector<string>> data, string filter)
-{
-    vector<int> positions;
-    string filter_type = splitter(filter, ":")[0];
-    string filter_value = splitter(filter, ":")[1];
-    int filter_type_position = 0;
-
-    for (int i = 0; i < int(data[0].size()); ++i)
-    {
-        if (data[0][i] == filter_type)
-        {
-            filter_type_position = i;
-        }
-    }
-
-    if (filter_type_position >= int(data[1].size()))
-    {
-        cout << RED << "ERROR - FIRST ROW'S SIZE IS LARGER THAN DATA ROWS" << RESET << endl;
-    }
-
-    for (int i = 1; i < int(data.size()); ++i)
-    {
-        if (data[i][filter_type_position] == filter_value && stoi(data[i][0]) >= 1000)
-        {
-            positions.push_back(i);
-        }
-    }
-
-    return positions;
-}
-
-/**
- * Concatenate selected elements of a vector into a single string.
- *
- * This function concatenates selected elements of a given vector of strings,
- * starting from the 'first' element and ending before the 'last' element.
- * The concatenated string is formed by joining the selected elements using the provided delimiter.
- *
- * @author Burak
- * @param head_string The initial string that forms the beginning of the concatenated string.
- * @param vector_line The vector of strings containing the elements to be concatenated.
- * @param first The first element to include in the concatenation (inclusive), or an empty string to start from the beginning.
- * @param last The last element to include in the concatenation (exclusive), or an empty string to include all elements.
- * @param DELIMITER The delimiter used to join the concatenated elements.
- * @return A single string formed by concatenating the selected elements with the specified delimiter.
- */
-string concatenate_vec(string head_string, vector<string> vector_line, string first, string last, string DELIMITER)
-{
-    int i_first;
-    int i_last;
-    if (first == "")
-    {
-        i_first = 0;
-    }
-    else
-    {
-        i_first = find_position(vector_line, first) + 1;
-    }
-
-    if (last == "")
-    {
-        i_last = int(vector_line.size());
-    }
-    else
-    {
-        i_last = find_position(vector_line, last);
-    }
-
-    string new_line = head_string;
-    for (int i = i_first; i < i_last; ++i)
-    {
-        new_line.append(vector_line[i] + DELIMITER);
-    }
-    return new_line;
-}
-
-/**
  * Generate histogram with labels on the x-axis
  *
  * @author Burak
@@ -483,14 +49,14 @@ TCanvas *hist_label(vector<string> names, vector<double> values, string hist_nam
     int nx = values.size();
     TCanvas *c1 = new TCanvas("c1", "c1", 10, 10, 900, 500);
     c1->SetGrid();
-    c1->SetBottomMargin(0.2);
+    c1->SetBottomMargin(0.5);
     TH1D *h = new TH1D(hist_name.c_str(), hist_name.c_str(), nx, 0, nx);
     h->SetStats(0);
     h->SetFillColor(30);
     for (int i = 0; i < nx; i++)
     {
         vector<string> new_name_vec = splitter(names[i], "_");
-        string new_name = concatenate_vec("",new_name_vec,"",""," ");
+        string new_name = concatenate_vec("", new_name_vec, "", "", " ");
         h->Fill(new_name.c_str(), values[i]);
     }
     h->Draw("HIST");
@@ -522,7 +88,7 @@ void histogram_result_writer(string data_path, string data_format_path, vector<s
     string data_format;
     ifstream data_format_reader(data_format_path);
     string temp_data_format;
-    temp_data_format = "Entries,FallMean,RiseMean,IntegralMean,PeakVoltMean,PeakTimeMean,FallStd,RiseStd,IntegralStd,PeakVoltStd,PeakTimeStd,";
+    temp_data_format = head_data_format_h;
 
     Out_hist << temp_data_format;
 
@@ -564,7 +130,7 @@ void histogram_result_writer(string data_path, string data_format_path, vector<s
  * @param hist_type
  * @return string
  */
-string histo_namer(vector<string> filters, string hist_type)
+string histogram_namer(vector<string> filters, string hist_type)
 {
     string histo_name = hist_type;
 
@@ -597,7 +163,7 @@ string histo_namer(vector<string> filters, string hist_type)
 vector<double> compare_hist(vector<vector<double>> data, vector<string> filters, string hist_type, string output_path, string bin_division)
 {
     vector<double> values;
-    string histo_name = histo_namer(filters, hist_type);
+    string histo_name = histogram_namer(filters, hist_type);
     vector<double> temp_data;
     vector<double> temp_std;
     for (int i = 0; i < int(data.size()); ++i)
@@ -668,7 +234,6 @@ vector<double> compare_hist(vector<vector<double>> data, vector<string> filters,
  */
 void custom_compare(string hist_path)
 {
-
     gErrorIgnoreLevel = kFatal; // Verbose Mode
 
     // Find Date of the Source File:
@@ -695,14 +260,8 @@ void custom_compare(string hist_path)
         string option_type;
         vector<string> availables = compare_available_options(hist_output, i, filtered_positions);
 
-        cout << YELLOW << "Options: " << RESET;
-        for (int j = 0; j < int(availables.size()); j++)
-        {
-            cout << availables[j] << ", ";
-        }
-        cout << "\n";
-
-        cout << YELLOW << hist_output[0][i] << ": " << RESET;
+        string availables_msg = concatenate_vec("",availables,"","",", ");
+        cout << BLUE << hist_output[0][i] << " Options: " << RESET << availables_msg << YELLOW << "\n>" << RESET;
         getline(cin, option_type);
 
         if (option_type == "")
@@ -743,8 +302,8 @@ void custom_compare(string hist_path)
 
         else
         {
-            cout << GREEN << filtered_positions.size() << " Entries Found" << RESET << endl;
-            cout << "   To Compare Press 'c'" << endl;
+            cout << GREEN << filtered_positions.size() << " Entries Found: " << RESET;
+            cout << "To Compare Press 'c'" << endl;
         }
     }
 
@@ -754,25 +313,16 @@ void custom_compare(string hist_path)
     }
 
     else
-    {
-        cout << GREEN << filtered_positions.size() << " Entries for Combination: " << RESET;
-        for (int i = 0; i < int(filters.size()); i++)
-        {
-            cout << filters[i] << ",";
-        }
-        cout << "\n";
+    {   
+        string filters_msg = concatenate_vec("", filters, "", "", ",");
+        cout << GREEN << filtered_positions.size() << " Entries for Combination: " << RESET << filters_msg << endl;
 
-        cout << "Divide Entries By: ";
+        // Ask Divide Option:
+        cout << YELLOW << "Divide Entries By\n>" << RESET;
         getline(cin, option_division);
 
-        // Create Directories and Initialize Root File:
-        string name_filter = "filtered";
-        for (int i = 0; i < int(filters.size()); i++)
-        {
-            string filtername = splitter(filters[i], ":")[1];
-            name_filter.append("_" + filtername);
-        }
-        std::replace(name_filter.begin(), name_filter.end(), '/', '-');
+        // Create Directories:
+        string name_filter = histogram_namer(filters, "filtered");
         string compare_root_path = string(fs::current_path()) + "/outputs/compare/" + hist_data_source + "/" + name_filter + "/";
         string compare_root_name = compare_root_path + "compare_hist.root";
         fs::create_directories(compare_root_path.c_str());
@@ -803,11 +353,11 @@ void custom_compare(string hist_path)
 }
 
 /**
- * Perform standard comparisons of histograms for various source, scintillator, and threshold combinations.
+ * Perform standard comparisons of histograms for various combinations.
  *
- * This function generates standard comparisons of histograms by considering different combinations
- * of source, scintillator, and threshold options. It reads histogram data from a provided file,
- * prompts the user for bin division, and generates histograms for selected combinations.
+ * This function generates standard comparisons of histograms by considering different combinations.
+ * It reads histogram data from a provided file,
+ * prompts the user for types and bin division, and generates histograms for selected combinations.
  *
  * @author Burak
  * @param hist_path The path to the histogram result file.
@@ -829,95 +379,134 @@ void standard_compare(string hist_path)
     hist_file->open(hist_path.c_str());
     hist_output = hist_reader(*hist_file);
 
-    // Generate Result For All Sources and Scintillators:
-    int position_source = find_position(hist_output[0], "Source");
-    int position_scintillator = find_position(hist_output[0], "Scintillator");
+    // Ask Types:
+    string option_types;
+    vector<string> types;
+    string available_types = concatenate_vec("", hist_output[0], "PeakTimeStd", "Trial", ",");
+    cout << BLUE << "Available Types: " << RESET << available_types << endl;
+    cout << YELLOW << "Select Types(type1,type2,...)\n>" << RESET;
+    getline(cin, option_types);
 
-    vector<string> option_source = compare_available_options(hist_output, position_source, {});
-    vector<string> option_scintillator = compare_available_options(hist_output, position_scintillator, {});
-
-    // Print All Scintillator and Source Options:
-    cout << YELLOW << "Sources: " << RESET;
-    for (int i = 0; i < int(option_source.size()); i++)
+    if (option_types == "")
     {
-        cout << option_source[i] << ", ";
+        option_types = concatenate_vec("", hist_output[0], "PeakTimeStd", "Trial", ",");
     }
 
-    cout << YELLOW << "\nScintillators: " << RESET;
-    for (int i = 0; i < int(option_scintillator.size()); i++)
+    types = splitter(option_types, ",");
+
+    // Find Type Values:
+    vector<vector<string>> values_types;
+    for (size_t i = 0; i < types.size(); i++)
     {
-        cout << option_scintillator[i] << ", ";
+        int position = find_position(hist_output[0], types[i]);
+        vector<string> values = compare_available_options(hist_output, position, {});
+        values_types.push_back(values);
+
+        string type_msg = concatenate_vec("", values, "", "", ",");
+        cout << BLUE << types[i] << ": " << RESET << type_msg << endl;
     }
-    cout << "\n";
 
     // Ask for Bin Division:
     string option_division;
-    cout << YELLOW << "Divide Entries By: " << RESET;
+    cout << YELLOW << "Divide Entries By \n>" << RESET;
     getline(cin, option_division);
 
-    for (int isource = 0; isource < int(option_source.size()); ++isource)
+    if (option_division == "" || option_division == "0")
     {
-        for (int iscintillator = 0; iscintillator < int(option_scintillator.size()); ++iscintillator)
+        option_division = "1";
+    }
+
+    // Find All Combinations of Type Values:
+    vector<string> all_combinations;
+    combination(values_types, 0, "", all_combinations, ",");
+
+    // Analyse Combinations
+    for (size_t icomb = 0; icomb < all_combinations.size(); icomb++)
+    {
+        vector<string> combination_str = splitter(all_combinations[icomb], ",");
+        vector<string> type_filters;
+        vector<int> positions;
+        for (size_t itype = 0; itype < types.size(); itype++)
         {
-            //  Find Source-Scintillator Combination Positions:
-            string filter_source = "Source:" + option_source[isource];
-            string filter_scintillator = "Scintillator:" + option_scintillator[iscintillator];
-
-            vector<int> source_position = filter(hist_output, filter_source);
-            vector<int> source_scintillator = filter(hist_output, filter_scintillator);
-            vector<int> positions = filter_intersector(source_position, source_scintillator);
-
-            if (positions.size() == 0)
+            string type_filter = types[itype] + ":" + combination_str[itype];
+            vector<int> points = filter(hist_output, type_filter);
+            if (itype == 0)
             {
-                cout << RED << "ERROR - NO COMBINATIONS FOR: " << option_source[isource] << " - " << option_scintillator[iscintillator] << RESET << endl;
+                positions = points;
             }
-
             else
             {
-                // Create Directories and Initialize Root File:
-                string compare_root_path = string(fs::current_path()) + "/outputs/compare/" + hist_data_source + "/" + option_source[isource] + "_" + option_scintillator[iscintillator] + "/";
-                string compare_root_name = compare_root_path + "compare_hist.root";
-                fs::create_directories(compare_root_path.c_str());
-                TFile *hist_root_file = new TFile(compare_root_name.c_str(), "RECREATE");
-
-                for (int t = 1; t < 6; ++t) // Generate 5 Histograms
-                {
-                    vector<vector<double>> hist_values;
-                    for (int k = 0; k < int(positions.size()); ++k)
-                    {
-                        int row = positions[k];
-                        vector<double> temp_hist_values;
-                        double value = stof(hist_output[row][t]);
-                        double error = stof(hist_output[row][t + 5]);
-                        temp_hist_values.push_back(value);
-                        temp_hist_values.push_back(error);
-                        hist_values.push_back(temp_hist_values);
-                    }
-                    string hist_type = hist_output[0][t];
-                    vector<string> filters = {filter_scintillator, filter_source};
-
-                    // Push Back Results:
-                    vector<double> value;
-                    string name;
-                    value = compare_hist(hist_values, filters, hist_type, compare_root_path, option_division);
-                    name = histo_namer(filters, "");
-                    values.push_back(value);
-                    names.push_back(name);
-                }
-                hist_root_file->Write();
-                delete hist_root_file;
-                cout << GREEN << "RESULT SAVED TO THE DIRECTORY: " << RESET << compare_root_path << endl;
+                positions = filter_intersector(positions, points);
             }
+            type_filters.push_back(type_filter);
+        }
+
+        if (positions.size() == 0)
+        {
+            string error_msg = concatenate_vec("", type_filters, "", "", ",");
+            cout << RED << "ERROR - NO COMBINATIONS FOR: " << RESET << error_msg  << endl;
+            continue;
+        }
+
+        else
+        {
+            // Create Directories and Initialize Root File:
+            string compare_root_path = string(fs::current_path()) + "/outputs/compare/" + hist_data_source + "/";
+
+            for (size_t ifilter = 0; ifilter < type_filters.size(); ifilter++)
+            {
+                string path_tail = splitter(type_filters[ifilter], ":").back();
+                std::replace(path_tail.begin(), path_tail.end(), '/', '-');
+                compare_root_path.append(path_tail + "_");
+            }
+            compare_root_path.append("/");
+
+            string compare_root_name = compare_root_path + "compare_hist.root";
+            fs::create_directories(compare_root_path.c_str());
+            TFile *hist_root_file = new TFile(compare_root_name.c_str(), "RECREATE");
+
+            for (int t = 1; t < 6; ++t) // Generate 5 Histograms
+            {
+                vector<vector<double>> hist_values;
+                for (int k = 0; k < int(positions.size()); ++k)
+                {
+                    int row = positions[k];
+                    vector<double> temp_hist_values;
+                    double value = stof(hist_output[row][t]);
+                    double error = stof(hist_output[row][t + 5]);
+                    temp_hist_values.push_back(value);
+                    temp_hist_values.push_back(error);
+                    hist_values.push_back(temp_hist_values);
+                }
+                string hist_type = hist_output[0][t];
+                vector<string> filters = type_filters;
+
+                // Push Back Results:
+                vector<double> value;
+                string name;
+                value = compare_hist(hist_values, filters, hist_type, compare_root_path, option_division);
+                name = histogram_namer(filters, "");
+                values.push_back(value);
+                names.push_back(name);
+            }
+            hist_root_file->Write();
+            delete hist_root_file;
+            cout << GREEN << "RESULT SAVED TO THE DIRECTORY: " << RESET << compare_root_path << endl;
         }
     }
-    delete hist_file;
 
     // Initialize:
     int n = (values.size() + 1) / 5;
     vector<vector<double>> value_groups = {{}, {}, {}, {}, {}};
     vector<vector<string>> name_groups = {{}, {}, {}, {}, {}};
     vector<string> pdf_names = {"FallTime(s)", "RiseTime(s)", "Integral(Vs)", "PeakVolt(V)", "PeakTime(s)"};
-    TFile *hist_result = new TFile("outputs/compare/result.root", "RECREATE");
+    string hist_result_path = "outputs/compare/";
+    for (size_t i = 0; i < types.size(); i++)
+    {
+        hist_result_path.append(types[i] + "_");
+    }
+    string root_result_path = hist_result_path + "result.root";
+    TFile *hist_result = new TFile(root_result_path.c_str(), "RECREATE");
 
     // Group Values of Their Types:
     for (int i = 0; i < n; i++)
@@ -938,12 +527,15 @@ void standard_compare(string hist_path)
     // Create Histograms for Each Group:
     for (int i = 0; i < 5; i++)
     {
-        string pdf_name = "outputs/compare/" + pdf_names[i] + ".pdf";
+        string pdf_name = hist_result_path + pdf_names[i] + ".pdf";
         hist_label(name_groups[i], value_groups[i], pdf_names[i])->Print(pdf_name.c_str());
         string current_path = fs::current_path();
-        cout << GREEN << "COMPARE RESULT SAVED TO THE DIRECTORY: " << RESET << string(fs::current_path()) + "/outputs/compare/" << endl;
+        cout << GREEN << "COMPARE RESULT (PDF) SAVED TO THE DIRECTORY: " << RESET << pdf_name << endl;
     }
-    hist_result->Write();    
+
+    hist_result->Write();
+    cout << GREEN << "COMPARE RESULT (ROOT) SAVED TO THE DIRECTORY: " << RESET << root_result_path << endl;
+
     delete hist_result;
 }
 
@@ -1499,3 +1091,5 @@ vector<string> analyser_h5(string filename, double ns)
     cout << GREEN << "Output is saved to the directory: " << RESET << outputpath << endl;
     return results_and_errors;
 }
+
+#endif

@@ -1,7 +1,6 @@
 #include "essential.h"
+#include "utilities.h"
 #include "functions.h"
-using namespace std;
-namespace fs = std::filesystem;
 
 int main()
 {
@@ -9,58 +8,45 @@ int main()
 
     // Initialize Variables:
     vector<vector<double>> output;
-    vector<string> results;
-    vector<string> errors;
-    int count = 0;
-    int no_of_data;
+    vector<std::string> results;
+    vector<std::string> errors;
+    vector<std::string> found_names;
+    std::string data_path;
+    std::string ns_string;
+    std::string data_format_path;
+    std::string option;
     double ns;
-    string found_name;
-    string data_path;
-    string ns_string;
-    string data_format_path;
-    string option;
 
-    cout << "Type 'compare', 'hadd' or Press ENTER: ";
+    cout << YELLOW << "Type 'compare', 'hadd' or Press ENTER\n>" << RESET;
     getline(cin, option);
 
     if (option == "compare" || option == "c") // Compare an existing histogram result file
     {
-        string option_path;
-        string option_type;
+        std::string option_path;
+        std::string option_type;
 
-        cout << "'standard' or 'custom': ";
+        cout << YELLOW << "'standard' or 'custom'\n> " << RESET;
         getline(cin, option_type);
 
         while (true) // Ask For Histogram Path
         {
-            cout << "Histogram Path (For Default Press Enter): ";
+            cout << YELLOW << "Histogram Path (For Default Press Enter):\n>" << RESET;
             getline(cin, option_path);
 
             if (option_path == "")
             {
-                option_path = string(fs::current_path()) + "/outputs/data/data_hist_result.txt";
-                if (std::filesystem::exists(option_path))
-                {
-                    cout << GREEN << "OPENED FILE: " + option_path << RESET << endl;
-                    break;
-                }
-                else
-                {
-                    cout << RED << "FILE NOT FOUND: " + option_path << RESET << endl;
-                    return 0;
-                }
+                option_path = hist_path_h;
+            }
+
+            if (std::filesystem::exists(option_path))
+            {
+                cout << GREEN << "OPENED FILE: " + option_path << RESET << endl;
+                break;
             }
             else
             {
-                if (std::filesystem::exists(option_path))
-                {
-                    cout << GREEN << "OPENED FILE: " + option_path << RESET << endl;
-                    break;
-                }
-                else
-                {
-                    cout << RED << "FILE NOT FOUND: " + option_path << RESET << endl;
-                }
+                cout << RED << "FILE NOT FOUND: " + option_path << RESET << endl;
+                return 0;
             }
         }
 
@@ -72,14 +58,15 @@ int main()
         {
             standard_compare(option_path);
         }
+
         return 0;
     }
-    
+
     else if (option == "hadd" || option == "h") // Merge Root Files
     {
-        string option_hadd_input_path;
-        string option_hadd_output_path;
-        cout << "Input Path: ";
+        std::string option_hadd_input_path;
+        std::string option_hadd_output_path;
+        cout << YELLOW << "Input Path\n>" << RESET;
         getline(cin, option_hadd_input_path);
         option_hadd_output_path = option_hadd_input_path + "result.root";
         hadd_creator(option_hadd_output_path, option_hadd_input_path);
@@ -90,17 +77,18 @@ int main()
     {
         while (true) // Ask For Data Folder
         {
-            cout << "Data Folder Path (For Default press ENTER): ";
+            cout << YELLOW << "Data Folder Path (For Default press ENTER)\n>" << RESET;
             getline(cin, data_path);
 
             if (data_path == "")
             {
-                data_path = "data";
+                data_path = data_path_h;
             }
 
             if (std::filesystem::exists(data_path))
             {
-                found_name = file_selector(data_path);
+                found_names = file_selector(data_path);
+                cout << GREEN << "  FOUND " << found_names.size() << " FILES." << RESET << endl;
                 break;
             }
 
@@ -112,21 +100,22 @@ int main()
 
         while (true) // Ask For Data Format
         {
-            cout << "Data Format Path (For Default press ENTER, For Custom '0'): ";
+            cout << YELLOW << "Data Format Path (For Default press ENTER, For Custom '0')\n>" << RESET;
             getline(cin, data_format_path);
 
             if (data_format_path == "")
             {
-                data_format_path = "DefaultFormat.txt";
+                data_format_path = default_data_format_path_h;
             }
 
             if (data_format_path == "0")
             {
-                data_format_path = "CustomFormat.txt";
+                data_format_path = custom_data_format_path_h;
             }
 
             if (std::filesystem::exists(data_format_path))
             {
+                cout << GREEN << "  SUCCESSFULLY OPENED FORMAT FILE." << endl;
                 break;
             }
 
@@ -138,11 +127,11 @@ int main()
 
         while (true) // Ask For Sampling Time
         {
-            cout << "Sampling Time(ns) (For Default-2.5ns press ENTER):";
+            cout << YELLOW << "Sampling Time(ns) (For Default-2.5ns press ENTER)\n>" << RESET;
             getline(cin, ns_string);
             if (ns_string == "")
             {
-                ns = 2.5e-9;
+                ns = sampling_time_h;
                 break;
             }
             if (is_number(ns_string))
@@ -156,19 +145,17 @@ int main()
             }
         }
 
-        std::ifstream inputfile(found_name);
-        std::string filename;
-        no_of_data = line_counter(found_name);
+        cout << BOLDORANGE << "_____________________________________________" << RESET << endl;
+        int n = found_names.size();
+        for (int i = 0; i < n; i++)
+        { // Loop All Files
 
-        while (std::getline(inputfile, filename)) // Loop Through All Files
-        {
-            count += 1;
-
-            cout << "\n" GREEN "Successfully opened the file: " << count << "/" << no_of_data << RESET << endl;
+            std::string filename = found_names[i];
+            cout << "\n" GREEN "Successfully opened the file: " << i + 1 << "/" << n << RESET << endl;
             cout << YELLOW << "File name: " << RESET << filename << endl;
 
-            vector<string> temp_results_and_errors;
-            string extension = splitter(filename, ".").back();
+            vector<std::string> temp_results_and_errors;
+            std::string extension = splitter(filename, ".").back();
 
             if (extension == "h5")
             {
@@ -186,7 +173,7 @@ int main()
 
                     for (int i = 0; i < 24; ++i) // Skip 24 Lines, not containing data
                     {
-                        string line;
+                        std::string line;
                         getline(*datafile, line);
                     }
                     output = reader(*datafile);
@@ -207,10 +194,10 @@ int main()
             {
                 cout << RED "ERROR: Could not open the file." RESET << endl;
             }
+            cout << BOLDORANGE << "_____________________________________________" << RESET << endl;
         }
 
         histogram_result_writer(data_path, data_format_path, results, errors); // Write Histogram Results
-        remove("temp_FoundFiles.txt");
         return 0;
     }
 }
