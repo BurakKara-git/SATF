@@ -185,7 +185,7 @@ vector<double> compare_hist(vector<vector<double>> data, vector<string> filters,
 
     double std = histo->GetStdDev();
     double mean = histo->GetMean();
-    vector<double> values = {n*1.0, mean, std};
+    vector<double> values = {n * 1.0, mean, std};
     delete histo;
 
     // bin_num = int((max_val - min_val) / std);
@@ -364,6 +364,7 @@ void standard_compare(string hist_path)
     gErrorIgnoreLevel = kFatal; // Verbose Mode
     vector<vector<double>> values;
     vector<string> names;
+    string path_name;
 
     // Find Date of the Source File:
     vector<string> temp_hist_data_source = splitter(hist_path, "/");
@@ -402,8 +403,14 @@ void standard_compare(string hist_path)
         cout << BLUE << types[i] << " Values (Press ENTER to Select All): " << RESET << values_msg << YELLOW << "\n>" << RESET;
         getline(cin, option_values);
         if (option_values != "")
-        {
+        {   
+            std::replace(option_values.begin(), option_values.end(), ',', '-');
+            path_name.append(option_values + "_");
             values_type = splitter(option_values, ",");
+        }
+        else
+        {
+            path_name.append(types[i]+"-all_");
         }
         values_types.push_back(values_type);
 
@@ -443,6 +450,7 @@ void standard_compare(string hist_path)
             {
                 positions = filter_intersector(positions, points);
             }
+
             type_filters.push_back(type_filter);
         }
 
@@ -505,7 +513,8 @@ void standard_compare(string hist_path)
     vector<vector<double>> value_groups = {{}, {}, {}, {}, {}};
     vector<vector<string>> name_groups = {{}, {}, {}, {}, {}};
     vector<string> pdf_names = {"FallTime", "RiseTime", "Integral", "PeakVolt", "PeakTime"};
-    string hist_result_path = concatenate_vec("outputs/compare/", types, "", "", "_");
+    string hist_result_path = "outputs/compare/" + path_name;
+    //string hist_result_path = concatenate_vec("outputs/compare/", types, "", "", "_");
     string root_result_path = hist_result_path + "result.root";
     TFile *hist_result = new TFile(root_result_path.c_str(), "RECREATE");
 
