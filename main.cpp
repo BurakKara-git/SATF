@@ -273,13 +273,17 @@ int main()
                     temp_found_names = file_selector(data_path, extensions_h[i]);
                     found_names.insert(found_names.end(), temp_found_names.begin(), temp_found_names.end());
                 }
+
+                cout << GREEN << "  FOUND " << found_names.size() << " FILES." << RESET << endl;
                 break;
             }
+
             else
             {
                 cout << RED << "ERROR: FILE DOES NOT EXIST!" << RESET << endl;
             }
         }
+        
         while (true) // Ask For Data Format
         {
             cout << YELLOW << "Data Format Path (For Default press ENTER, For Custom '0')\n>" << RESET;

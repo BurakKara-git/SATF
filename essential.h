@@ -62,8 +62,10 @@
 #ifndef consth
 #define consth
 
-const std::string hist_path_h = std::string(std::filesystem::current_path()) + "/outputs/data/data_hist_result.txt";                                            // Location of Histogram (main)
+const std::string hist_path_h = std::string(std::filesystem::current_path()) + "/outputs/results/data_hist_result.txt";                                         // Location of Default Histogram (main)
 const std::string output_hist_path_h = std::string(std::filesystem::current_path()) + "/outputs/results/";                                                      // Location of Histogram Results (functions - histogram_result_writer)
+const std::string output_analyse_path_h = std::string(std::filesystem::current_path()) + "/outputs/analyse/";                                                   // Location of Analyse Results (functions - analyser_h5, analyser_matrix)
+const std::string compare_root_path_h = std::string(std::filesystem::current_path()) + "/outputs/compare/";                                                     // Location of Compare Results (functions - custom_compare, standard_compare)
 const std::string data_path_h = std::string(std::filesystem::current_path()) + "/data/";                                                                        // Location of Data (main)
 const std::string default_data_format_path_h = std::string(std::filesystem::current_path()) + "/DefaultFormat.txt";                                             // Location of Default Format (main)
 const std::string custom_data_format_path_h = std::string(std::filesystem::current_path()) + "/CustomFormat.txt";                                               // Location of Custom Format (main)

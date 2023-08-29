@@ -321,7 +321,7 @@ void custom_compare(string hist_path)
 
         // Create Directories:
         string name_filter = histogram_namer(filters, "filtered");
-        string compare_root_path = string(fs::current_path()) + "/outputs/compare/" + hist_data_source + "/" + name_filter + "/";
+        string compare_root_path = compare_root_path_h + hist_data_source + "/" + name_filter + "/";
         string compare_root_name = compare_root_path + "compare_hist.root";
         fs::create_directories(compare_root_path.c_str());
         TFile *hist_root_file = new TFile(compare_root_name.c_str(), "RECREATE");
@@ -493,7 +493,7 @@ void standard_compare(string hist_path, string operation)
         else
         {
             // Create Directories and Initialize Root File:
-            string compare_root_path = string(fs::current_path()) + "/outputs/compare/" + hist_data_source + "/" + path_name + "/events/";
+            string compare_root_path = compare_root_path_h + hist_data_source + "/" + path_name + "/events/";
 
             for (size_t ifilter = 0; ifilter < type_filters.size(); ifilter++)
             {
@@ -603,7 +603,7 @@ vector<string> analyser_matrix(vector<vector<double>> input, string filename, do
     // Create Directories:
     fs::path path{filename.c_str()};
     path = fs::relative(path, fs::current_path());
-    string head = string(fs::current_path()) + "/outputs/";
+    string head = output_analyse_path_h;
     string outputpath = head + string(path) + "/";
     outputpath = outputpath.substr(0, outputpath.size() - 5); // Remove .txt/
     fs::create_directories(outputpath);
@@ -863,7 +863,7 @@ vector<string> analyser_h5(string filename, double ns)
     // Create Directories:
     fs::path path{filename.c_str()};
     path = fs::relative(path, fs::current_path());
-    string head = string(fs::current_path()) + "/outputs/";
+    string head = output_analyse_path_h;
     string outputpath = head + string(path) + "/";
     outputpath = outputpath.substr(0, outputpath.size() - 5); // Remove .txt/
     fs::create_directories(outputpath);
