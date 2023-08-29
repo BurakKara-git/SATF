@@ -5,6 +5,7 @@
 /**
  * Function to run compare function
  *
+ * @author Burak
  * @param option_path
  * @param option_type
  */
@@ -25,6 +26,7 @@ void compare(std::string option_path, std::string option_type)
 /**
  * Function to run  analyser_h5 and analyse_matrix depending on the extensions
  *
+ * @author Burak
  * @param data_path
  * @param data_format_path
  * @param found_names
@@ -37,12 +39,11 @@ std::string analyse(std::string data_path, std::string data_format_path, vector<
     vector<vector<double>> output;
     vector<std::string> results;
     vector<std::string> errors;
-
-    cout << BOLDORANGE << "______________________ANALYSE______________________" << RESET << endl;
     int n = found_names.size();
-    for (int i = 0; i < n; i++)
-    { // Loop All Files
 
+    // Loop All Files:
+    for (int i = 0; i < n; i++)
+    {
         std::string filename = found_names[i];
         cout << "\n" GREEN "Successfully opened the file: " << i + 1 << "/" << n << RESET << endl;
         cout << YELLOW << "File name: " << RESET << filename << endl;
@@ -50,14 +51,26 @@ std::string analyse(std::string data_path, std::string data_format_path, vector<
         vector<std::string> temp_results_and_errors;
         std::string extension = splitter(filename, ".").back();
 
-        if (extension == "h5")
+        // Check If Analysed:
+        vector<string> analysed = check_if_analysed(filename, hist_path_h, errors_path_h);
+
+        // If Already Analysed, Continue:
+        if (analysed.size() != 0)
+        {
+            cout << GREEN << "ALREADY ANALYSED: " << RESET << filename << endl;
+            results.push_back(analysed[0]);
+            errors.push_back(analysed[1]);
+            continue;
+        }
+
+        if (extension == "h5" && analysed.size() == 0)
         {
             temp_results_and_errors = analyser_h5(filename, ns);
             results.push_back(temp_results_and_errors[0]);
             errors.push_back(temp_results_and_errors[1]);
         }
 
-        else if (extension == "txt")
+        else if (extension == "txt" && analysed.size() == 0)
         {
             ifstream *datafile = new ifstream;
             datafile->open(filename.c_str());
@@ -241,7 +254,7 @@ int main()
                 cout << RED << "ERROR: INPUT IS NOT A NUMBER!" << RESET << endl;
             }
         }
-        
+
         analyse(data_path, data_format_path, found_names, ns);
         return 0;
     }
@@ -283,7 +296,7 @@ int main()
                 cout << RED << "ERROR: FILE DOES NOT EXIST!" << RESET << endl;
             }
         }
-        
+
         while (true) // Ask For Data Format
         {
             cout << YELLOW << "Data Format Path (For Default press ENTER, For Custom '0')\n>" << RESET;

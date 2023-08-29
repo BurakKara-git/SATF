@@ -36,6 +36,72 @@ vector<vector<string>> hist_reader(ifstream &thefile)
 }
 
 /**
+ * Check if the event is already analysed. If it is, return existing result. 
+ * 
+ * @author Burak
+ * @param filename 
+ * @param hist_path 
+ * @param error_path 
+ * @return vector<string> 
+ */
+vector<string> check_if_analysed(string filename, string hist_path, string error_path)
+{
+    if (!fs::exists(hist_path))
+    {
+        return {};
+    }
+
+    if (!fs::exists(error_path))
+    {
+        return {};
+    }
+
+    else
+    {
+        // Find Name and Date:
+        string extension = splitter(filename, ".").back();
+        string input_path = filename.substr(0, filename.length() - extension.size() - 1); // Remove .txt
+        string outputname = splitter(input_path, "/").back();
+        vector<string> vec_input_path = splitter(input_path, "/");
+        string date = concatenate_vec("", vec_input_path, "data", outputname, "/");
+        date = date.substr(0, date.size() - 1);
+
+        vector<string> name_split = splitter(outputname, "_"); // Split name
+
+        // Merge Histogram Data as a String:
+        string result = date;
+        for (int k = 0; k < int(name_split.size()); ++k)
+        {
+            result.append("," + name_split[k]);
+        }
+
+        ifstream reader(hist_path);
+        ifstream in(error_path.c_str());
+        string line;
+        string error;
+
+        int count = 0;
+        while (getline(reader, line))
+        {
+            count += 1;
+            int pos = line.find(result);
+            if (pos != -1)
+            {
+                for (int i = 0; i < count; ++i)
+                {
+                    getline(in, error);
+                }
+
+                getline(in, error);
+
+                return {line, error};
+            }
+        }
+        return {};
+    }
+}
+
+/**
  * Generate histogram with labels on the x-axis
  *
  * @author Burak
