@@ -79,14 +79,16 @@ vector<string> splitter(string name, string DELIMITER)
  * @param path The path of the directory in which to search for files.
  * @return vector<string>  The list of found files with absolute path.
  */
-vector<string> file_selector(string path)
+vector<string> file_selector(string path, string ext)
 {
     vector<string> files;
-
-    for (auto &p : filesystem::recursive_directory_iterator(path))
+    if (std::filesystem::exists(path))
     {
-        if (p.path().extension() == ".txt" || p.path().extension() == ".h5")
-            files.push_back(filesystem::absolute(p).string());
+        for (auto &p : filesystem::recursive_directory_iterator(path))
+        {
+            if (p.path().extension() == ext)
+                files.push_back(filesystem::absolute(p).string());
+        }
     }
     return files;
 }
@@ -259,10 +261,17 @@ void hadd_creator(string hadd_path, string input_path)
         }
     }
 
-    int systemErr = system(hadd_command.c_str()); // Merge all ROOT Files
-    if (systemErr == -1)
+    if (std::filesystem::exists(input_path))
     {
-        cout << RED << "ERROR - COULD NOT MERGE ROOT FILES" << endl;
+        int systemErr = system(hadd_command.c_str()); // Merge all ROOT Files
+        if (systemErr == -1)
+        {
+            cout << RED << "ERROR - COULD NOT MERGE ROOT FILES" << endl;
+        }
+    }
+
+    else{
+        cout << RED << "ERROR - DIRECTORY DOES NOT EXIST: " << RESET << input_path << endl;
     }
 }
 

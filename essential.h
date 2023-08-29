@@ -71,5 +71,6 @@ const std::string head_data_format_h = "Entries,FallMean,RiseMean,IntegralMean,P
 const std::string browser_h = "root -l --web=server:8899 $ROOTSYS/tutorials/v7/browser.cxx";                                                                    // Browser Command (main)
 const double sampling_time_h = 2.5e-9;                                                                                                                          // Default Sampling Time (main)
 const int filter_size_h = 1000;                                                                                                                                 // Default Filter Size (utilities - filter)
+const std::vector<std::string> extensions_h = {".txt", ".h5"};                                                                                                  // Default Extensions (main)
 
 #endif

@@ -178,7 +178,13 @@ int main()
 
             if (std::filesystem::exists(data_path))
             {
-                found_names = file_selector(data_path);
+                for (size_t i = 0; i < extensions_h.size(); i++)
+                {
+                    vector<std::string> temp_found_names;
+                    temp_found_names = file_selector(data_path, extensions_h[i]);
+                    found_names.insert(found_names.end(), temp_found_names.begin(), temp_found_names.end());
+                }
+
                 cout << GREEN << "  FOUND " << found_names.size() << " FILES." << RESET << endl;
                 break;
             }
@@ -235,6 +241,7 @@ int main()
                 cout << RED << "ERROR: INPUT IS NOT A NUMBER!" << RESET << endl;
             }
         }
+        
         analyse(data_path, data_format_path, found_names, ns);
         return 0;
     }
@@ -260,17 +267,19 @@ int main()
 
             if (std::filesystem::exists(data_path))
             {
-                found_names = file_selector(data_path);
-                cout << GREEN << "  FOUND " << found_names.size() << " FILES." << RESET << endl;
+                for (size_t i = 0; i < extensions_h.size(); i++)
+                {
+                    vector<std::string> temp_found_names;
+                    temp_found_names = file_selector(data_path, extensions_h[i]);
+                    found_names.insert(found_names.end(), temp_found_names.begin(), temp_found_names.end());
+                }
                 break;
             }
-
             else
             {
                 cout << RED << "ERROR: FILE DOES NOT EXIST!" << RESET << endl;
             }
         }
-
         while (true) // Ask For Data Format
         {
             cout << YELLOW << "Data Format Path (For Default press ENTER, For Custom '0')\n>" << RESET;
