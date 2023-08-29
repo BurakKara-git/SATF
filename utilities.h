@@ -245,7 +245,8 @@ void hadd_creator(string hadd_path, string input_path)
     {
         string option_delete;
         cout << RED << "ERROR: ROOT FILE EXISTS" << RESET << endl;
-        cout << YELLOW <<  "DELETE and CONTINUE? " << "y/n \n>" << RESET;
+        cout << YELLOW << "DELETE and CONTINUE? "
+             << "y/n \n>" << RESET;
         getline(cin, option_delete);
         if (option_delete == "y" || option_delete == "Y")
         {
@@ -441,14 +442,14 @@ string concatenate_vec(string head_string, vector<string> vector_line, string fi
 
 /**
  * Takes vector<vector<string>> as an input and returns all combinations of vector<string>s
- * 
- * 
+ *
+ *
  * @author Burak
- * @param vectors 
- * @param index 
- * @param str_combination 
- * @param result 
- * @param DELIMITER 
+ * @param vectors
+ * @param index
+ * @param str_combination
+ * @param result
+ * @param DELIMITER
  */
 void combination(const vector<vector<string>> &vectors, size_t index, string str_combination, vector<string> &result, string DELIMITER)
 {
@@ -458,10 +459,10 @@ void combination(const vector<vector<string>> &vectors, size_t index, string str
         return;
     }
 
-    for (size_t i = 0; i < vectors[index].size(); i++){
+    for (size_t i = 0; i < vectors[index].size(); i++)
+    {
         combination(vectors, index + 1, str_combination + vectors[index][i] + DELIMITER, result, DELIMITER);
     }
-        
 }
 
 #endif

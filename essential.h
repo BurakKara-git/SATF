@@ -62,13 +62,14 @@
 #ifndef consth
 #define consth
 
-const std::string hist_path_h = std::string(std::filesystem::current_path()) + "/outputs/data/data_hist_result.txt";
-const std::string data_path_h = std::string(std::filesystem::current_path()) + "/data/";
-const std::string default_data_format_path_h = std::string(std::filesystem::current_path()) + "/DefaultFormat.txt";
-const std::string custom_data_format_path_h = std::string(std::filesystem::current_path()) + "/CustomFormat.txt";
-const std::string head_data_format_h = "Entries,FallMean,RiseMean,IntegralMean,PeakVoltMean,PeakTimeMean,FallStd,RiseStd,IntegralStd,PeakVoltStd,PeakTimeStd,";
-const std::string browser_h = "root -l --web=server:8899 $ROOTSYS/tutorials/v7/browser.cxx";
-const double sampling_time_h = 2.5e-9;
-const int filter_size_h = 1000;
+const std::string hist_path_h = std::string(std::filesystem::current_path()) + "/outputs/data/data_hist_result.txt";                                            // Location of Histogram (main)
+const std::string output_hist_path_h = std::string(std::filesystem::current_path()) + "/outputs/results/";                                                      // Location of Histogram Results (functions - histogram_result_writer)
+const std::string data_path_h = std::string(std::filesystem::current_path()) + "/data/";                                                                        // Location of Data (main)
+const std::string default_data_format_path_h = std::string(std::filesystem::current_path()) + "/DefaultFormat.txt";                                             // Location of Default Format (main)
+const std::string custom_data_format_path_h = std::string(std::filesystem::current_path()) + "/CustomFormat.txt";                                               // Location of Custom Format (main)
+const std::string head_data_format_h = "Entries,FallMean,RiseMean,IntegralMean,PeakVoltMean,PeakTimeMean,FallStd,RiseStd,IntegralStd,PeakVoltStd,PeakTimeStd,"; // Default String Head (functions - histogram_result_writer)
+const std::string browser_h = "root -l --web=server:8899 $ROOTSYS/tutorials/v7/browser.cxx";                                                                    // Browser Command (main)
+const double sampling_time_h = 2.5e-9;                                                                                                                          // Default Sampling Time (main)
+const int filter_size_h = 1000;                                                                                                                                 // Default Filter Size (utilities - filter)
 
 #endif
