@@ -46,12 +46,12 @@ vector<vector<string>> hist_reader(ifstream &thefile)
  */
 vector<string> check_if_analysed(string filename, string hist_path, string error_path)
 {
-    if (!fs::exists(hist_path))
+    if (!fs::exists(hist_path) || re_analyse)
     {
         return {};
     }
 
-    if (!fs::exists(error_path))
+    else if (!fs::exists(error_path))
     {
         return {};
     }

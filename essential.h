@@ -63,7 +63,7 @@
 #define consth
 
 const std::string hist_path_h = std::string(std::filesystem::current_path()) + "/outputs/results/data_hist_result.txt";                                         // Location of Default Histogram (main)
-const std::string errors_path_h = std::string(std::filesystem::current_path()) + "/outputs/results/data_errors.txt";                                              // Location of Default Errors (main)
+const std::string errors_path_h = std::string(std::filesystem::current_path()) + "/outputs/results/data_errors.txt";                                            // Location of Default Errors (main)
 const std::string output_hist_path_h = std::string(std::filesystem::current_path()) + "/outputs/results/";                                                      // Location of Histogram Results (functions - histogram_result_writer)
 const std::string output_analyse_path_h = std::string(std::filesystem::current_path()) + "/outputs/analyse/";                                                   // Location of Analyse Results (functions - analyser_h5, analyser_matrix)
 const std::string compare_root_path_h = std::string(std::filesystem::current_path()) + "/outputs/compare/";                                                     // Location of Compare Results (functions - custom_compare, standard_compare)
@@ -74,6 +74,10 @@ const std::string head_data_format_h = "Entries,FallMean,RiseMean,IntegralMean,P
 const std::string browser_h = "root -l --web=server:8899 $ROOTSYS/tutorials/v7/browser.cxx";                                                                    // Browser Command (main)
 const double sampling_time_h = 2.5e-9;                                                                                                                          // Default Sampling Time (main)
 const int filter_size_h = 1000;                                                                                                                                 // Default Filter Size (utilities - filter)
-const std::vector<std::string> extensions_h = {".txt", ".h5"};                                                                                                  // Default Extensions (main)
+bool re_analyse = false;                                                                                                                                        // Do not Analyse Already Analysed Data (functions - check_if_analysed)
+const std::vector<std::string> extensions_h = {
+    ".txt",
+    ".h5",
+}; // Default Extensions (main)
 
 #endif
