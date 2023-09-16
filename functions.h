@@ -607,6 +607,7 @@ void standard_compare(string hist_path, string operation)
     // Initialize:
     int n = (values.size() + 1) / 5;
     vector<vector<double>> value_groups = {{}, {}, {}, {}, {}};
+    vector<vector<double>> value_groups_std = {{}, {}, {}, {}, {}};
     vector<vector<string>> name_groups = {{}, {}, {}, {}, {}};
     vector<string> pdf_names = {"FallTime", "RiseTime", "Integral", "PeakVolt", "PeakTime"};
     string hist_result_path = "outputs/compare/" + hist_data_source + "/" + path_name + "/";
@@ -624,6 +625,12 @@ void standard_compare(string hist_path, string operation)
         value_groups[3].push_back(values[i * 5 + 3][1]);
         value_groups[4].push_back(values[i * 5 + 4][1]);
 
+        value_groups_std[0].push_back(values[i * 5 + 0][2]);
+        value_groups_std[1].push_back(values[i * 5 + 1][2]);
+        value_groups_std[2].push_back(values[i * 5 + 2][2]);
+        value_groups_std[3].push_back(values[i * 5 + 3][2]);
+        value_groups_std[4].push_back(values[i * 5 + 4][2]);
+
         name_groups[0].push_back(names[i * 5 + 0]);
         name_groups[1].push_back(names[i * 5 + 1]);
         name_groups[2].push_back(names[i * 5 + 2]);
@@ -635,7 +642,9 @@ void standard_compare(string hist_path, string operation)
     for (int i = 0; i < 5; i++)
     {
         string pdf_name = hist_result_path + pdf_names[i] + ".pdf";
+        string pdf_name_std = hist_result_path + pdf_names[i] + "_std.pdf";
         hist_label(name_groups[i], value_groups[i], pdf_names[i], int(types.size()))->Print(pdf_name.c_str());
+        hist_label(name_groups[i], value_groups_std[i], pdf_names[i] + "_std", int(types.size()))->Print(pdf_name_std.c_str());
         string current_path = fs::current_path();
         cout << GREEN << "COMPARE RESULT (PDF) SAVED TO THE DIRECTORY: " << RESET << pdf_name << endl;
     }
