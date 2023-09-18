@@ -1,7 +1,7 @@
 CXX = $(shell root-config --cxx)
 FLAGS = $(shell root-config --cflags) -O2 -Wall -Wextra
 LIBS = $(shell root-config --evelibs)
-ARCH = x86_64
+ARCH = arm64
 SOURCES = ./main.cpp
 PROGRAM = satforce
 YELLOW = \033[1;33m
@@ -13,7 +13,7 @@ all: clean $(PROGRAM) run
 
 $(PROGRAM): $(SOURCES)
 	@echo "$(YELLOW)Compiling...$(RESET)"
-	h5c++ -shlib $(FLAGS) $(LIBS) -arch arm64 -o $@ $^
+	h5c++ -shlib $(FLAGS) $(LIBS) -arch $(ARCH) -o $@ $^
 	@echo "$(GREEN)Done!$(RESET)"
 	@echo "$(GREEN)Execute the command$(RESET) $(CYAN)./$(PROGRAM)$(RESET) $(GREEN)or$(RESET) $(CYAN)make run$(RESET) $(GREEN)to run the program.$(RESET)"
 
