@@ -948,7 +948,7 @@ vector<string> analyser_h5(string filename, double ns)
     path = fs::relative(path, fs::current_path());
     string head = output_analyse_path_h;
     string outputpath = head + string(path) + "/";
-    outputpath = outputpath.substr(0, outputpath.size() - 5); // Remove .txt/
+    outputpath = outputpath.substr(0, outputpath.size() - 4); // Remove .h5/
     fs::create_directories(outputpath);
 
     // Find Name and Date:
