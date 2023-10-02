@@ -1,1 +1,1 @@
-Date,Source,Scintillator,Segment,Threshold,Trial,PLACEHOLDER,PLACEHOLDER,PLACEHOLDER,PLACEHOLDER,PLACEHOLDER,PLACEHOLDER,PLACEHOLDER,PLACEHOLDER
+Date,Source,Scintillator,Amp,Segment,Threshold,PMT,MSps,Sample,Trial

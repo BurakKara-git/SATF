@@ -36,13 +36,13 @@ vector<vector<string>> hist_reader(ifstream &thefile)
 }
 
 /**
- * Check if the event is already analysed. If it is, return existing result. 
- * 
+ * Check if the event is already analysed. If it is, return existing result.
+ *
  * @author Burak
- * @param filename 
- * @param hist_path 
- * @param error_path 
- * @return vector<string> 
+ * @param filename
+ * @param hist_path
+ * @param error_path
+ * @return vector<string>
  */
 vector<string> check_if_analysed(string filename, string hist_path, string error_path)
 {
@@ -780,9 +780,17 @@ vector<string> analyser_matrix(vector<vector<double>> input, string filename, do
             integrals.push_back(fitFcn->Integral(fall_high, x_max)); // double epsrel = 1.0e-20
         }
 
-        if (isnan(risetime.back()) || isnan(falltime.back()) || isnan(integrals.back())) // Write Corrupted Data
+        if (((isnan(risetime.back()) || isnan(falltime.back()) || isnan(integrals.back())) && print_corrupted) || print_all) // Write Corrupted Data
         {
-            cout << RED << "ERROR - NAN VALUE: " << RESET << outputpath << ", Segment: " << j + 1 << endl;
+            if (isnan(risetime.back()) || isnan(falltime.back()) || isnan(integrals.back()))
+            {
+                cout << RED << "ERROR - NAN VALUE: " << RESET << outputpath << ", Segment: " << j + 1 << endl;
+            }
+
+            else
+            {
+                cout << "PRINTED: " << outputpath << ", Segment: " << j + 1 << endl;
+            }
 
             // Graph Design
             TCanvas *c1 = new TCanvas("c1", "c1", 200, 10, 600, 400);
@@ -977,6 +985,8 @@ vector<string> analyser_h5(string filename, double ns)
 
     for (int i = 0; i < no_of_datasets; ++i)
     {
+        gErrorIgnoreLevel = kFatal; // Verbose Mode
+
         // Open Dataset:
         string datasetPath = ds_name_head + to_string(i + 1) + ds_name_tail;
         DataSet dset = fp.openDataSet(datasetPath.c_str());
@@ -1072,9 +1082,17 @@ vector<string> analyser_h5(string filename, double ns)
             integrals.push_back(fitFcn->Integral(fall_high, x_max)); // double epsrel = 1.0e-20
         }
 
-        if (isnan(risetime.back()) || isnan(falltime.back()) || isnan(integrals.back())) // Write Corrupted Data
+        if (((isnan(risetime.back()) || isnan(falltime.back()) || isnan(integrals.back())) && print_corrupted) || print_all) // Write Corrupted Data
         {
-            cout << RED << "ERROR - NAN VALUE: " << RESET << outputpath << ", Segment: " << i + 1 << endl;
+            if (isnan(risetime.back()) || isnan(falltime.back()) || isnan(integrals.back()))
+            {
+                cout << RED << "ERROR - NAN VALUE: " << RESET << outputpath << ", Segment: " << i + 1 << endl;
+            }
+
+            else
+            {
+                cout << "PRINTED: " << outputpath << ", Segment: " << i + 1 << endl;
+            }
 
             // Graph Design
             TCanvas *c1 = new TCanvas("c1", "c1", 200, 10, 600, 400);
