@@ -492,7 +492,7 @@ void standard_compare(string hist_path, string operation)
         {
             std::replace(option_values.begin(), option_values.end(), ',', '-');
             path_name.append(option_values + "_");
-            values_type = splitter(option_values, ",");
+            values_type = splitter(option_values, "-");
         }
         else
         {
