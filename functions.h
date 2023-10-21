@@ -3,7 +3,6 @@
 
 #include "essential.h"
 #include "utilities.h"
-#include <H5Cpp.h>
 using namespace H5;
 using namespace std;
 namespace fs = std::filesystem;
@@ -36,72 +35,6 @@ vector<vector<string>> hist_reader(ifstream &thefile)
 }
 
 /**
- * Check if the event is already analysed. If it is, return existing result.
- *
- * @author Burak
- * @param filename
- * @param hist_path
- * @param error_path
- * @return vector<string>
- */
-vector<string> check_if_analysed(string filename, string hist_path, string error_path)
-{
-    if (!fs::exists(hist_path) || re_analyse)
-    {
-        return {};
-    }
-
-    else if (!fs::exists(error_path))
-    {
-        return {};
-    }
-
-    else
-    {
-        // Find Name and Date:
-        string extension = splitter(filename, ".").back();
-        string input_path = filename.substr(0, filename.length() - extension.size() - 1); // Remove .txt
-        string outputname = splitter(input_path, "/").back();
-        vector<string> vec_input_path = splitter(input_path, "/");
-        string date = concatenate_vec("", vec_input_path, "data", outputname, "/");
-        date = date.substr(0, date.size() - 1);
-
-        vector<string> name_split = splitter(outputname, "_"); // Split name
-
-        // Merge Histogram Data as a String:
-        string result = date;
-        for (int k = 0; k < int(name_split.size()); ++k)
-        {
-            result.append("," + name_split[k]);
-        }
-
-        ifstream reader(hist_path);
-        ifstream in(error_path.c_str());
-        string line;
-        string error;
-
-        int count = 0;
-        while (getline(reader, line))
-        {
-            count += 1;
-            int pos = line.find(result);
-            if (pos != -1)
-            {
-                for (int i = 0; i < count; ++i)
-                {
-                    getline(in, error);
-                }
-
-                getline(in, error);
-
-                return {line, error};
-            }
-        }
-        return {};
-    }
-}
-
-/**
  * Generate histogram with labels on the x-axis
  *
  * @author Burak
@@ -110,7 +43,7 @@ vector<string> check_if_analysed(string filename, string hist_path, string error
  * @param hist_name
  * @return TCanvas*
  */
-TCanvas *hist_label(vector<string> names, vector<double> values, string hist_name, int margin)
+TCanvas *hist_label(vector<string> names, vector<double> values, string hist_name)
 {
     int nx = values.size();
     TCanvas *c1 = new TCanvas("c1", "c1", 10, 10, 900, 500);
@@ -127,66 +60,6 @@ TCanvas *hist_label(vector<string> names, vector<double> values, string hist_nam
     }
     h->Draw("HIST");
     return c1;
-}
-
-/**
- * Write histogram results and errors to output files.
- *
- * This function takes the paths to histogram data, data format, and the calculated results along with
- * associated errors. It generates output files to store histogram results and errors. The function also
- * creates directories for the output files based on the current working directory.
- *
- * @author Burak
- * @param data_path The path to the input histogram data.
- * @param data_format_path The path to the data format file.
- * @param results A vector containing calculated histogram results as strings.
- * @param errors A vector containing error messages as strings.
- */
-string histogram_result_writer(string data_path, string data_format_path, vector<string> results, vector<string> errors)
-{
-    string output_hist_path = output_hist_path_h;
-    string outputname = splitter(data_path, "/").back();
-    fs::create_directories(output_hist_path);
-
-    string output_hist = output_hist_path + outputname + "_hist_result.txt";
-    ofstream Out_hist(output_hist.c_str());
-
-    string data_format;
-    ifstream data_format_reader(data_format_path);
-    string temp_data_format;
-    temp_data_format = head_data_format_h;
-
-    Out_hist << temp_data_format;
-
-    while (getline(data_format_reader, data_format)) // Write Data Format
-    {
-        Out_hist << data_format;
-    }
-
-    for (int k = 0; k < int(results.size()); ++k) // Write Results
-    {
-        Out_hist << "\n"
-                 << results[k];
-    }
-
-    cout << GREEN << "Histogram Result Saved to The Directory: " << RESET << output_hist << endl;
-    Out_hist.close();
-    data_format_reader.close();
-
-    if (errors.size() > 0) // Write Errors as TXT
-    {
-        string output_errors = output_hist_path + outputname + "_errors.txt";
-        ofstream Out_errors(output_errors.c_str());
-
-        for (int k = 0; k < int(errors.size()); ++k)
-        {
-            Out_errors << errors[k] << "\n";
-        }
-
-        cout << RED << "Errors Saved to the Directory: " << RESET << output_errors << endl;
-        Out_errors.close();
-    }
-    return output_hist;
 }
 
 /**
@@ -235,7 +108,6 @@ vector<double> compare_hist(vector<vector<double>> data, vector<string> filters,
     for (int i = 0; i < int(data.size()); ++i)
     {
         temp_data.push_back(abs(data[i][0]));
-        temp_std.push_back(abs(data[i][1]));
     }
     int n = temp_data.size();
 
@@ -264,19 +136,6 @@ vector<double> compare_hist(vector<vector<double>> data, vector<string> filters,
         new_histo->Fill(temp_data[i]);
     }
 
-    if (hist_type == "IntegralMean")
-    {
-        new_histo->SetXTitle("Weber(Vs)");
-    }
-    else if (hist_type == "PeakVoltMean")
-    {
-        new_histo->SetXTitle("Voltage(V)");
-    }
-    else
-    {
-        new_histo->SetXTitle("Time(s)");
-    }
-
     new_histo->Draw();
 
     string histo_file_name = output_path + histo_name + ".pdf";
@@ -284,136 +143,6 @@ vector<double> compare_hist(vector<vector<double>> data, vector<string> filters,
     delete c_hist;
 
     return values;
-}
-
-/**
- * Perform custom comparisons of histograms using user-defined filters.
- *
- * This function guides the user through the process of custom comparisons of histograms by applying
- * user-specified filters. It reads histogram data from a provided file, prompts the user to select
- * filters for comparison, and generates histograms for selected combinations.
- *
- * @author Burak
- * @param hist_path The path to the histogram result file.
- */
-void custom_compare(string hist_path)
-{
-    gErrorIgnoreLevel = kFatal; // Verbose Mode
-
-    // Find Date of the Source File:
-    vector<string> temp_hist_data_source = splitter(hist_path, "/");
-    temp_hist_data_source = splitter(temp_hist_data_source.back(), "_");
-    string hist_data_source = temp_hist_data_source[0];
-
-    // Read the Histogram Result File:
-    vector<vector<string>> hist_output;
-    ifstream *hist_file = new ifstream;
-    hist_file->open(hist_path.c_str());
-    hist_output = hist_reader(*hist_file);
-
-    // Initialize:
-    vector<string> filters;
-    string option_division;
-    vector<int> filtered_positions;
-    int type_size = hist_output[0].size();
-
-    // Ask For Filter Values:
-    int count = 0;
-    for (int i = 11; i < type_size - 1; i++)
-    {
-        string option_type;
-        vector<string> availables = compare_available_options(hist_output, i, filtered_positions);
-
-        string availables_msg = concatenate_vec("", availables, "", "", ", ");
-        cout << BLUE << hist_output[0][i] << " Options: " << RESET << availables_msg << YELLOW << "\n>" << RESET;
-        getline(cin, option_type);
-
-        if (option_type == "")
-        {
-            continue;
-        }
-
-        if (option_type == "c")
-        {
-            break;
-        }
-
-        if (count == 0)
-        {
-            count += 1;
-            filters.push_back(hist_output[0][i] + ":" + option_type);
-            filtered_positions = filter(hist_output, filters.back());
-        }
-
-        else
-        {
-
-            filters.push_back(hist_output[0][i] + ":" + option_type);
-            vector<int> temp_filtered_positions = filter(hist_output, filters.back());
-            filtered_positions = filter_intersector(filtered_positions, temp_filtered_positions);
-        }
-
-        if (filtered_positions.size() == 0)
-        {
-            cout << ORANGE << "No Combinations For: " << RESET;
-            for (int i = 0; i < int(filters.size()); i++)
-            {
-                cout << filters[i] << ",";
-            }
-            cout << "\n";
-            break;
-        }
-
-        else
-        {
-            cout << GREEN << filtered_positions.size() << " Entries Found: " << RESET;
-            cout << "To Compare Press 'c'" << endl;
-        }
-    }
-
-    if (filtered_positions.size() == 0)
-    {
-        return;
-    }
-
-    else
-    {
-        string filters_msg = concatenate_vec("", filters, "", "", ",");
-        cout << GREEN << filtered_positions.size() << " Entries for Combination: " << RESET << filters_msg << endl;
-
-        // Ask Divide Option:
-        cout << YELLOW << "Divide Entries By\n>" << RESET;
-        getline(cin, option_division);
-
-        // Create Directories:
-        string name_filter = histogram_namer(filters, "filtered");
-        string compare_root_path = compare_root_path_h + hist_data_source + "/" + name_filter + "/";
-        string compare_root_name = compare_root_path + "compare_hist.root";
-        fs::create_directories(compare_root_path.c_str());
-        TFile *hist_root_file = new TFile(compare_root_name.c_str(), "RECREATE");
-
-        for (int t = 1; t < 6; ++t) // Generate 5 Histograms
-        {
-            vector<vector<double>> hist_values;
-            for (int k = 0; k < int(filtered_positions.size()); ++k)
-            {
-                int row = filtered_positions[k];
-                vector<double> temp_hist_values;
-                double value = stof(hist_output[row][t]);
-                double error = stof(hist_output[row][t + 5]);
-                temp_hist_values.push_back(value);
-                temp_hist_values.push_back(error);
-                hist_values.push_back(temp_hist_values);
-            }
-            string hist_type = hist_output[0][t];
-            compare_hist(hist_values, filters, hist_type, compare_root_path, option_division);
-        }
-        hist_root_file->Write();
-        delete hist_root_file;
-        cout << GREEN << "RESULT SAVED TO THE DIRECTORY: " << RESET << compare_root_path << endl;
-    }
-
-    delete hist_file;
 }
 
 /**
@@ -448,7 +177,7 @@ void standard_compare(string hist_path, string operation)
     // Ask Types:
     string option_types;
     vector<string> types;
-    string available_types = concatenate_vec("", hist_output[0], "PeakTimeStd", "Trial", ",");
+    string available_types = concatenate_vec("", hist_output[0], "Integral", "Trial", ",");
     cout << BLUE << "Available Types: " << RESET << available_types << endl;
     cout << YELLOW << "Select Types(type1,type2,...)\n>" << RESET;
 
@@ -464,7 +193,7 @@ void standard_compare(string hist_path, string operation)
 
     if (option_types == "")
     {
-        option_types = concatenate_vec("", hist_output[0], "PeakTimeStd", "Trial", ",");
+        option_types = concatenate_vec("", hist_output[0], "Integral", "Trial", ",");
     }
 
     types = splitter(option_types, ",");
@@ -504,7 +233,7 @@ void standard_compare(string hist_path, string operation)
         cout << BLUE << types[i] << ": " << RESET << type_msg << endl;
     }
 
-    // Ask for Bin Division:
+    // Ask Bin Division:
     string option_division;
     cout << YELLOW << "Divide Entries By \n>" << RESET;
 
@@ -573,7 +302,7 @@ void standard_compare(string hist_path, string operation)
             fs::create_directories(compare_root_path.c_str());
             TFile *hist_root_file = new TFile(compare_root_name.c_str(), "RECREATE");
 
-            for (int t = 1; t < 6; ++t) // Generate 5 Histograms
+            for (int t = 0; t < 5; ++t) // Generate 5 Histograms
             {
                 vector<vector<double>> hist_values;
                 for (int k = 0; k < int(positions.size()); ++k)
@@ -581,9 +310,7 @@ void standard_compare(string hist_path, string operation)
                     int row = positions[k];
                     vector<double> temp_hist_values;
                     double value = stof(hist_output[row][t]);
-                    double error = stof(hist_output[row][t + 5]);
                     temp_hist_values.push_back(value);
-                    temp_hist_values.push_back(error);
                     hist_values.push_back(temp_hist_values);
                 }
                 string hist_type = hist_output[0][t];
@@ -609,7 +336,7 @@ void standard_compare(string hist_path, string operation)
     vector<vector<double>> value_groups = {{}, {}, {}, {}, {}};
     vector<vector<double>> value_groups_std = {{}, {}, {}, {}, {}};
     vector<vector<string>> name_groups = {{}, {}, {}, {}, {}};
-    vector<string> pdf_names = {"FallTime", "RiseTime", "Integral", "PeakVolt", "PeakTime"};
+    vector<string> pdf_names = {"PeakVoltage", "PeakTime", "RiseTime", "FallTime", "Integral"};
     string hist_result_path = "outputs/compare/" + hist_data_source + "/" + path_name + "/";
     // string hist_result_path = concatenate_vec("outputs/compare/", types, "", "", "_");
     string root_result_path = hist_result_path + "result.root";
@@ -643,8 +370,8 @@ void standard_compare(string hist_path, string operation)
     {
         string pdf_name = hist_result_path + pdf_names[i] + ".pdf";
         string pdf_name_std = hist_result_path + pdf_names[i] + "_std.pdf";
-        hist_label(name_groups[i], value_groups[i], pdf_names[i], int(types.size()))->Print(pdf_name.c_str());
-        hist_label(name_groups[i], value_groups_std[i], pdf_names[i] + "_std", int(types.size()))->Print(pdf_name_std.c_str());
+        hist_label(name_groups[i], value_groups[i], pdf_names[i])->Print(pdf_name.c_str());
+        hist_label(name_groups[i], value_groups_std[i], pdf_names[i] + "_std")->Print(pdf_name_std.c_str());
         string current_path = fs::current_path();
         cout << GREEN << "COMPARE RESULT (PDF) SAVED TO THE DIRECTORY: " << RESET << pdf_name << endl;
     }
@@ -659,577 +386,368 @@ void standard_compare(string hist_path, string operation)
     hadd_creator(hadd_path, hadd_input);
 }
 
-/**
- * Analyze matrix data and generate histogram results.
- *
- * This function takes a 2D matrix of input data, a filename, and a sampling interval in seconds.
- * It performs analysis on the matrix data, calculates peak voltages, rise and fall times, and integrates
- * the falling part of the data. The results are stored in histograms and saved as ROOT files. Error handling
- * is performed for NaN values and corrupted data segments.
- *
- * @author Burak
- * @param input A 2D vector containing the input data matrix.
- * @param filename The filename of the input data.
- * @param ns The sampling interval in seconds.
- * @return A vector of strings containing calculated histogram results and error messages.
- */
-vector<string> analyser_matrix(vector<vector<double>> input, string filename, double ns)
+void compare()
 {
-    // Create Directories:
-    fs::path path{filename.c_str()};
-    path = fs::relative(path, fs::current_path());
-    string head = output_analyse_path_h;
-    string outputpath = head + string(path) + "/";
-    outputpath = outputpath.substr(0, outputpath.size() - 5); // Remove .txt/
-    fs::create_directories(outputpath);
+    cout << BOLDORANGE << "______________________COMPARE______________________" << RESET << endl;
+    std::string option_path;
+    std::string option_type;
 
-    // Find Name and Date:
-    string extension = splitter(filename, ".").back();
-    string input_path = filename.substr(0, filename.length() - extension.size() - 1); // Remove .txt
-    string outputname = splitter(input_path, "/").back();
-    vector<string> vec_input_path = splitter(input_path, "/");
-    string date = concatenate_vec("", vec_input_path, "data", outputname, "/");
-    date = date.substr(0, date.size() - 1);
-
-    // Initialize:
-    vector<string> results_and_errors;
-    string rootname = outputpath + "/result.root";
-    TFile *rootfile = new TFile(rootname.c_str(), "RECREATE");
-    int no_of_datasets = int(input.size());
-    vector<double> peak_voltages(no_of_datasets);
-    vector<double> peak_time;
-    vector<double> integrals;
-    vector<double> risetime;
-    vector<double> falltime;
-    vector<double> hist_result;
-    vector<string> name_split;
-
-    int no_of_datas = input[0].size();
-    vector<double> x_axis(no_of_datas); // time
-    for (int i = 0; i < no_of_datas; i++)
+    // Ask Histogram Path:
+    while (true)
     {
-        x_axis[i] = i * ns; // Sampling time
-    }
+        cout << YELLOW << "Histogram Path (For Default Press Enter):\n>" << RESET;
+        getline(cin, option_path);
 
-    for (int j = 0; j < no_of_datasets; j++)
-    {
-        gErrorIgnoreLevel = kFatal; // Verbose Mode
-        double x_max = no_of_datas * ns;
-        vector<double> y_axis = input[j];
-        double summation = summation_vec(y_axis, 0);
-
-        TGraph *graph = new TGraph(no_of_datas, &x_axis[0], &y_axis[0]);
-        TF1 *fitFcn = new TF1("fitFcn", "[0]*TMath::Landau(x,[1],[2])", 0, x_max);
-        if (summation > 0)
+        // Default Path:
+        if (option_path == "")
         {
-            auto it = max_element(y_axis.begin(), y_axis.end());
-            peak_voltages[j] = *it; // Find the peak y value
-            int max_index = distance(y_axis.begin(), it);
-            peak_time.push_back(x_axis[max_index]);
+            option_path = hist_path_h;
+        }
 
-            // Landau Fit:
-            float max_value = *it;
-            float scale = max_value;
-            float mu = max_index * ns; // Location Parameter
-            float sigma = 1 * ns;      // Scale Parameter of Fit
-            fitFcn->SetParameters(scale, mu, sigma);
-            fitFcn->SetRange(0, x_max);
-            graph->Fit("fitFcn", "wRQ");
-
-            // Calculate Rise-Fall Time:
-            double max_value_fit = fitFcn->GetMaximum();
-            double max_time_fit = fitFcn->GetParameter(1);
-            double rise_low = fitFcn->GetX(max_value_fit * 0.2, 0, max_time_fit);
-            double rise_high = fitFcn->GetX(max_value_fit * 0.8, 0, max_time_fit);
-            double fall_high = fitFcn->GetX(max_value_fit * 0.8, max_time_fit, x_max);
-            double fall_low = fitFcn->GetX(max_value_fit * 0.2, max_time_fit, x_max);
-            risetime.push_back(rise_high - rise_low);
-            falltime.push_back(fall_low - fall_high);
-
-            // Calculate Integral of the Fall:
-            integrals.push_back(fitFcn->Integral(fall_high, x_max)); // double epsrel = 1.0e-20
+        if (std::filesystem::exists(option_path))
+        {
+            cout << GREEN << "OPENED FILE: " + option_path << RESET << endl;
+            break;
         }
 
         else
         {
-            auto it = min_element(y_axis.begin(), y_axis.end());
-            peak_voltages[j] = *it; // Find the peak y value
-            int min_index = distance(y_axis.begin(), it);
-            peak_time.push_back(x_axis[min_index]);
-
-            // Landau Fit:
-            float min_value = *it;
-            float scale = min_value;
-            float mu = min_index * ns; // Location Parameter
-            float sigma = 1 * ns;      // Scale Parameter of Fit
-            fitFcn->SetParameters(scale, mu, sigma);
-            fitFcn->SetRange(0, x_max);
-            graph->Fit("fitFcn", "wRQ");
-
-            // Calculate Rise-Fall Time:
-            double min_value_fit = fitFcn->GetMinimum();
-            double min_time_fit = fitFcn->GetParameter(1);
-            double rise_low = fitFcn->GetX(min_value_fit * 0.2, 0, min_time_fit);
-            double rise_high = fitFcn->GetX(min_value_fit * 0.8, 0, min_time_fit);
-            double fall_high = fitFcn->GetX(min_value_fit * 0.8, min_time_fit, x_max);
-            double fall_low = fitFcn->GetX(min_value_fit * 0.2, min_time_fit, x_max);
-            risetime.push_back(rise_high - rise_low);
-            falltime.push_back(fall_low - fall_high);
-
-            // Calculate Integral of the Fall:
-            integrals.push_back(fitFcn->Integral(fall_high, x_max)); // double epsrel = 1.0e-20
-        }
-
-        if (((isnan(risetime.back()) || isnan(falltime.back()) || isnan(integrals.back())) && print_corrupted) || print_all) // Write Corrupted Data
-        {
-            if (isnan(risetime.back()) || isnan(falltime.back()) || isnan(integrals.back()))
-            {
-                cout << RED << "ERROR - NAN VALUE: " << RESET << outputpath << ", Segment: " << j + 1 << endl;
-            }
-
-            else
-            {
-                cout << "PRINTED: " << outputpath << ", Segment: " << j + 1 << endl;
-            }
-
-            // Graph Design
-            TCanvas *c1 = new TCanvas("c1", "c1", 200, 10, 600, 400);
-            c1->SetGrid();
-            c1->Draw();
-            string error_title = string(path) + " - Voltage vs. Time Segment: " + to_string(j + 1);
-            graph->SetTitle(error_title.c_str());
-            graph->GetXaxis()->SetTitle("Time (s)");
-            graph->GetYaxis()->SetTitle("Voltage (V)");
-            graph->SetMarkerStyle(8);
-            graph->SetMarkerColor(kBlue);
-            graph->SetMarkerSize(0.7);
-            graph->SetLineColor(kBlue);
-            graph->SetLineWidth(3);
-            graph->Draw("A*");
-            gStyle->SetOptFit(1);
-
-            // Save Graph as Root and PDF File:
-            string root_path = outputpath + "/errors/root";
-            string pdf_path = outputpath + "/errors/pdf";
-            fs::create_directories(root_path.c_str());
-            fs::create_directories(pdf_path.c_str());
-            string output_root = root_path + "/graph_" + to_string(j + 1) + ".root";
-            string output_pdf = pdf_path + "/graph_" + to_string(j + 1) + ".pdf";
-            c1->SaveAs(output_pdf.c_str());
-            c1->SaveAs(output_root.c_str());
-            delete c1;
-        }
-
-        cout << "Analysing... " << j + 1 << "/" << no_of_datasets << "\r";
-        cout.flush();
-        delete fitFcn;
-        delete graph;
-        gROOT->Reset();
-    }
-
-    // Create Histograms
-    string path_str = string(path);
-    std::replace(path_str.begin(), path_str.end(), '/', '-');
-    string h_fall_title = path_str + " - Fall Time";
-    string h_rise_title = path_str + " - Rise Time";
-    string h_integral_title = path_str + " - Fall Integral";
-    string h_peak_volt_title = path_str + " - Peak Voltage";
-    string h_peak_time_title = path_str + " - Peak Time";
-
-    string fall_histname = "h_fall_" + path_str;
-    string rise_histname = "h_rise_" + path_str;
-    string integral_histname = "h_integral_" + path_str;
-    string peak_volt_histname = "h_peak_volt_" + path_str;
-    string peak_time_histname = "h_peak_time_" + path_str;
-
-    TH1 *h_fall = new TH1D(fall_histname.c_str(), h_fall_title.c_str(), 10, *min_element(falltime.begin(), falltime.end()), *max_element(falltime.begin(), falltime.end()));
-    TH1 *h_rise = new TH1D(rise_histname.c_str(), h_rise_title.c_str(), 10, *min_element(risetime.begin(), risetime.end()), *max_element(risetime.begin(), risetime.end()));
-    TH1 *h_integral = new TH1D(integral_histname.c_str(), h_integral_title.c_str(), 10, *min_element(integrals.begin(), integrals.end()), *max_element(integrals.begin(), integrals.end()));
-    TH1 *h_peak_volt = new TH1D(peak_volt_histname.c_str(), h_peak_volt_title.c_str(), 10, *min_element(peak_voltages.begin(), peak_voltages.end()), *max_element(peak_voltages.begin(), peak_voltages.end()));
-    TH1 *h_peak_time = new TH1D(peak_time_histname.c_str(), h_peak_time_title.c_str(), 10, *min_element(peak_time.begin(), peak_time.end()), *max_element(peak_time.begin(), peak_time.end()));
-
-    h_fall->SetXTitle("Time(s)");
-    h_rise->SetXTitle("Time(s)");
-    h_integral->SetXTitle("Weber(Vs)");
-    h_peak_volt->SetXTitle("Voltage(V)");
-    h_peak_time->SetXTitle("Time(s)");
-
-    string errors = outputpath;
-    for (int i = 0; i < no_of_datasets; i++)
-    {
-        if (isnan(risetime[i]) || isnan(falltime[i]) || isnan(integrals[i])) // Pushback Corrupted Segments
-        {
-            errors.append("," + to_string(i + 1));
-        }
-
-        else // Fill Histograms
-        {
-            h_fall->Fill(falltime[i]);
-            h_rise->Fill(risetime[i]);
-            h_integral->Fill(integrals[i]);
-            h_peak_volt->Fill(peak_voltages[i]);
-            h_peak_time->Fill(peak_time[i]);
+            cout << RED << "FILE NOT FOUND: " + option_path << RESET << endl;
+            return;
         }
     }
 
-    // Print Results as CSV Format:
-    hist_result.push_back(h_fall->GetEntries());
-    hist_result.push_back(h_fall->GetMean());
-    hist_result.push_back(h_rise->GetMean());
-    hist_result.push_back(h_integral->GetMean());
-    hist_result.push_back(h_peak_volt->GetMean());
-    hist_result.push_back(h_peak_time->GetMean());
-    hist_result.push_back(h_fall->GetStdDev());
-    hist_result.push_back(h_rise->GetStdDev());
-    hist_result.push_back(h_integral->GetStdDev());
-    hist_result.push_back(h_peak_volt->GetStdDev());
-    hist_result.push_back(h_peak_time->GetStdDev());
-
-    name_split = splitter(outputname, "_"); // Split name
-
-    // Merge Histogram Data as a String:
-    string result;
-    for (int k = 0; k < int(hist_result.size()); ++k)
-    {
-        result = result + hist_result[k] + ",";
-    }
-    result.append(date);
-    for (int k = 0; k < int(name_split.size()); ++k)
-    {
-        result.append("," + name_split[k]);
-    }
-
-    // Write Histograms and Error Plots as a Root File:
-    rootfile->Write();
-
-    // Print Histogram Results as Txt File:
-    string output_txt = outputpath + "/result.txt";
-    ofstream Out_txt(output_txt.c_str());
-
-    Out_txt << "Fall-Integral,Peaks(V),Time(s),RiseTime(s),FallTime(s)";
-    for (int i = 0; i < no_of_datasets; i++)
-    {
-        Out_txt << "\n"
-                << integrals[i] << "," << peak_voltages[i] << "," << peak_time[i] << "," << risetime[i] << "," << falltime[i];
-    }
-    Out_txt.close();
-
-    // Free Memory:
-    delete h_fall;
-    delete h_rise;
-    delete h_integral;
-    delete h_peak_volt;
-    delete h_peak_time;
-    rootfile->Close();
-
-    cout << GREEN << "Output is saved to the directory: " << RESET << outputpath << endl;
-
-    results_and_errors = {result, errors};
-    return results_and_errors;
+    standard_compare(option_path, "");
 }
 
-/**
- * Analyze H5 file data and generate histogram results.
- *
- * This function takes an H5 file, reads dataset segments, and performs analysis on the data,
- * calculating peak voltages, rise and fall times, and integrating the falling part of the data.
- * The results are stored in histograms and saved as ROOT files. Error handling is performed for
- * NaN values and corrupted data segments.
- *
- * @author Burak
- * @param filename The filename of the H5 file.
- * @param ns The sampling interval in seconds.
- * @return A vector of strings containing calculated histogram results and error messages.
- */
-vector<string> analyser_h5(string filename, double ns)
+void writer(FileFormalism File_Obj, vector<vector<double>> data)
 {
-    // Create Directories:
-    fs::path path{filename.c_str()};
-    path = fs::relative(path, fs::current_path());
-    string head = output_analyse_path_h;
-    string outputpath = head + string(path) + "/";
-    outputpath = outputpath.substr(0, outputpath.size() - 4); // Remove .h5/
-    fs::create_directories(outputpath);
+    string root_path = string(fs::current_path()) + "/outputs/root/" + File_Obj.date + "/";
+    string root_name = root_path + File_Obj.name + ".root";
 
-    // Find Name and Date:
-    string extension = splitter(filename, ".").back();
-    string input_path = filename.substr(0, filename.length() - extension.size() - 1); // Remove .txt
-    string outputname = splitter(input_path, "/").back();
-    vector<string> vec_input_path = splitter(input_path, "/");
-    string date = concatenate_vec("", vec_input_path, "data", outputname, "/");
-    date = date.substr(0, date.size() - 1);
+    // Create new ROOT File:
+    fs::create_directories(root_path.c_str());
+    // Initialize Rootfile and Tree:
+    TFile *rootFile = TFile::Open(root_name.c_str(), "RECREATE");
+    TTree *tree = new TTree("tree", "Signal Tree");
+    tree->SetEntries(data.size());
 
-    // Dataset Path:
-    string ds_name_head = "/Waveforms/Channel 1/Channel 1 Seg";
-    string ds_name_tail = "Data";
-
-    // Open H5 File:
-    H5File fp(filename.c_str(), H5F_ACC_RDONLY);
-
-    // Get the Number of Segments:
-    Group count_group = fp.openGroup("/Waveforms/Channel 1");
-    hsize_t size = count_group.getNumObjs();
-    int no_of_datasets = int(size);
-
-    // Initialize:
-    vector<string> results_and_errors;
-    string rootname = outputpath + "/result.root";
-    vector<double> peak_time;
-    vector<double> integrals;
-    vector<double> risetime;
-    vector<double> falltime;
-    vector<double> hist_result;
-    vector<string> name_split;
-    vector<double> peak_voltages(no_of_datasets);
-    TFile *rootfile = new TFile(rootname.c_str(), "RECREATE");
-
-    for (int i = 0; i < no_of_datasets; ++i)
+    // Loop Data Points
+    for (size_t i = 0; i < data.size(); i++)
     {
-        gErrorIgnoreLevel = kFatal; // Verbose Mode
+        // Initialize Segments:
+        string segment = "seg" + to_string(i + 1);
+        double signal;
+        TBranch *branch = tree->Branch(segment.c_str(), &signal, (segment + "/D").c_str());
 
-        // Open Dataset:
-        string datasetPath = ds_name_head + to_string(i + 1) + ds_name_tail;
-        DataSet dset = fp.openDataSet(datasetPath.c_str());
-
-        // Define the Memory Dataspace:
-        DataSpace dspace = dset.getSpace();
-        hsize_t dims[2];
-        dspace.getSimpleExtentDims(dims, NULL);
-        hsize_t dimsm[1];
-        dimsm[0] = dims[0];
-        DataSpace memspace(1, dimsm);
-
-        // Create a Vector with Same Size:
-        vector<double> y_axis;
-        y_axis.resize(dims[0]);
-        dset.read(y_axis.data(), PredType::NATIVE_DOUBLE, memspace, dspace);
-
-        // Check if Peak is at Negative or Positive:
-        double summation = summation_vec(y_axis, 0);
-
-        // Create X-Axis:
-        int no_of_datas = y_axis.size();
-        vector<double> x_axis(no_of_datas); // time
-        for (int i = 0; i < no_of_datas; i++)
+        // Fill Segments:
+        for (size_t j = 0; j < data[i].size(); j++)
         {
-            x_axis[i] = i * ns; // Sampling time
+            signal = data[i][j];
+            branch->Fill();
+        }
+    }
+
+    // Write and Close Files:
+    rootFile->Write();
+    rootFile->Close();
+}
+
+void reader()
+{
+    cout << BOLDORANGE << "______________________READ______________________" << RESET << endl;
+    std::string data_path;
+    vector<std::string> found_names;
+
+    // Ask Data Folder:
+    while (true)
+    {
+        cout << YELLOW << "Data Folder Path (For Default press ENTER)\n>" << RESET;
+        getline(cin, data_path);
+
+        if (data_path == "")
+        {
+            data_path = data_path_h;
         }
 
-        // Initialize Graph and Fit Function:
-        double x_max = no_of_datas * ns;
-        TGraph *graph = new TGraph(no_of_datas, &x_axis[0], &y_axis[0]);
-        TF1 *fitFcn = new TF1("fitFcn", "[0]*TMath::Landau(x,[1],[2])", 0, x_max);
-
-        if (summation > 0) // Peak at Positive
+        if (std::filesystem::exists(data_path))
         {
-            // Find Peak Value:
-            auto it = max_element(y_axis.begin(), y_axis.end());
-            peak_voltages[i] = *it;
-            int max_index = distance(y_axis.begin(), it);
-            peak_time.push_back(x_axis[max_index]);
-
-            // Landau Fit:
-            float max_value = *it;
-            float scale = max_value;
-            float mu = max_index * ns; // Location Parameter
-            float sigma = 1 * ns;      // Scale Parameter of Fit
-            fitFcn->SetParameters(scale, mu, sigma);
-            fitFcn->SetRange(0, x_max);
-            graph->Fit("fitFcn", "wRQ");
-
-            // Calculate Rise-Fall Time:
-            double max_value_fit = fitFcn->GetMaximum();
-            double max_time_fit = fitFcn->GetParameter(1);
-            double rise_low = fitFcn->GetX(max_value_fit * 0.2, 0, max_time_fit);
-            double rise_high = fitFcn->GetX(max_value_fit * 0.8, 0, max_time_fit);
-            double fall_high = fitFcn->GetX(max_value_fit * 0.8, max_time_fit, x_max);
-            double fall_low = fitFcn->GetX(max_value_fit * 0.2, max_time_fit, x_max);
-            risetime.push_back(rise_high - rise_low);
-            falltime.push_back(fall_low - fall_high);
-
-            // Calculate Integral of the Fall:
-            integrals.push_back(fitFcn->Integral(fall_high, x_max)); // double epsrel = 1.0e-20
-        }
-
-        else // Peak at Negative
-        {
-            // Find Peak Value:
-            auto it = min_element(y_axis.begin(), y_axis.end());
-            peak_voltages[i] = *it;
-            int min_index = distance(y_axis.begin(), it);
-            peak_time.push_back(x_axis[min_index]);
-
-            // Landau Fit:
-            float min_value = *it;
-            float scale = min_value;
-            float mu = min_index * ns; // Location Parameter
-            float sigma = 1 * ns;      // Scale Parameter of Fit
-            fitFcn->SetParameters(scale, mu, sigma);
-            fitFcn->SetRange(0, x_max);
-            graph->Fit("fitFcn", "wRQ");
-
-            // Calculate Rise-Fall Time:
-            double min_value_fit = fitFcn->GetMinimum();
-            double min_time_fit = fitFcn->GetParameter(1);
-            double rise_low = fitFcn->GetX(min_value_fit * 0.2, 0, min_time_fit);
-            double rise_high = fitFcn->GetX(min_value_fit * 0.8, 0, min_time_fit);
-            double fall_high = fitFcn->GetX(min_value_fit * 0.8, min_time_fit, x_max);
-            double fall_low = fitFcn->GetX(min_value_fit * 0.2, min_time_fit, x_max);
-            risetime.push_back(rise_high - rise_low);
-            falltime.push_back(fall_low - fall_high);
-
-            // Calculate Integral of the Fall:
-            integrals.push_back(fitFcn->Integral(fall_high, x_max)); // double epsrel = 1.0e-20
-        }
-
-        if (((isnan(risetime.back()) || isnan(falltime.back()) || isnan(integrals.back())) && print_corrupted) || print_all) // Write Corrupted Data
-        {
-            if (isnan(risetime.back()) || isnan(falltime.back()) || isnan(integrals.back()))
+            for (size_t i = 0; i < extensions_h.size(); i++)
             {
-                cout << RED << "ERROR - NAN VALUE: " << RESET << outputpath << ", Segment: " << i + 1 << endl;
+                vector<std::string> temp_found_names;
+                temp_found_names = file_selector(data_path, extensions_h[i]);
+                found_names.insert(found_names.end(), temp_found_names.begin(), temp_found_names.end());
             }
 
+            cout << GREEN << "  FOUND " << found_names.size() << " FILES." << RESET << endl;
+            break;
+        }
+
+        else
+        {
+            cout << RED << "ERROR: FILE DOES NOT EXIST!" << RESET << endl;
+        }
+    }
+
+    // Loop Files:
+    for (size_t i = 0; i < found_names.size(); i++)
+    {
+        FileFormalism File_Obj = file_formaliser(found_names[i]);
+        string root_path = string(fs::current_path()) + "/outputs/root/" + File_Obj.date + "/";
+        string root_name = root_path + File_Obj.name + ".root";
+
+        // If Exists, Pass:
+        if (std::filesystem::exists(root_name))
+        {
+            cout << GREEN << "ALREADY READ: " << RESET << root_name << endl;
+        }
+
+        else
+        {
+            // Read txt Files:
+            if (splitter(found_names[i], ".").back() == "txt")
+            {
+                vector<vector<double>> output;
+                ifstream *datafile = new ifstream;
+                datafile->open(found_names[i].c_str());
+                for (int i = 0; i < 24; ++i) // Skip 24 Lines, not containing data
+                {
+                    std::string line;
+                    getline(*datafile, line);
+                }
+                output = txt_reader(*datafile);
+
+                // Write the ROOT file:
+                writer(File_Obj, output);
+                delete datafile;
+            }
+
+            // Read h5 Files:
             else
             {
-                cout << "PRINTED: " << outputpath << ", Segment: " << i + 1 << endl;
+                vector<vector<double>> output;
+                output = h5_reader(found_names[i]);
+
+                // Write the ROOT file:
+                writer(File_Obj, output);
             }
 
-            // Graph Design
-            TCanvas *c1 = new TCanvas("c1", "c1", 200, 10, 600, 400);
-            c1->SetGrid();
-            c1->Draw();
-            string error_title = date + " " + outputname + " - Voltage vs. Time Segment: " + to_string(i + 1);
-            graph->SetTitle(error_title.c_str());
-            graph->GetXaxis()->SetTitle("Time (s)");
-            graph->GetYaxis()->SetTitle("Voltage (V)");
-            graph->SetMarkerStyle(8);
-            graph->SetMarkerColor(kBlue);
-            graph->SetMarkerSize(0.7);
-            graph->SetLineColor(kBlue);
-            graph->SetLineWidth(3);
-            graph->Draw("A*");
-            gStyle->SetOptFit(1);
+                cout << GREEN << "FILE SAVED TO: " << RESET << root_name << endl;
 
-            // Save Graph as Root and PDF File:
-            string root_path = outputpath + "/errors/root";
-            string pdf_path = outputpath + "/errors/pdf";
-            fs::create_directories(root_path.c_str());
-            fs::create_directories(pdf_path.c_str());
-            string output_root = root_path + "/graph_" + to_string(i + 1) + ".root";
-            string output_pdf = pdf_path + "/graph_" + to_string(i + 1) + ".pdf";
-            c1->SaveAs(output_pdf.c_str());
-            c1->SaveAs(output_root.c_str());
-            delete c1;
-        }
-
-        cout << "Analysing... " << i + 1 << "/" << no_of_datasets << "\r";
-        cout.flush();
-        delete fitFcn;
-        delete graph;
-        gROOT->Reset();
-    }
-
-    // Create Histograms
-    string path_str = string(path);
-    std::replace(path_str.begin(), path_str.end(), '/', '-');
-    string h_fall_title = path_str + " - Fall Time";
-    string h_rise_title = path_str + " - Rise Time";
-    string h_integral_title = path_str + " - Fall Integral";
-    string h_peak_volt_title = path_str + " - Peak Voltage";
-    string h_peak_time_title = path_str + " - Peak Time";
-
-    string fall_histname = "h_fall_" + path_str;
-    string rise_histname = "h_rise_" + path_str;
-    string integral_histname = "h_integral_" + path_str;
-    string peak_volt_histname = "h_peak_volt_" + path_str;
-    string peak_time_histname = "h_peak_time_" + path_str;
-
-    TH1 *h_fall = new TH1D(fall_histname.c_str(), h_fall_title.c_str(), 10, *min_element(falltime.begin(), falltime.end()), *max_element(falltime.begin(), falltime.end()));
-    TH1 *h_rise = new TH1D(rise_histname.c_str(), h_rise_title.c_str(), 10, *min_element(risetime.begin(), risetime.end()), *max_element(risetime.begin(), risetime.end()));
-    TH1 *h_integral = new TH1D(integral_histname.c_str(), h_integral_title.c_str(), 10, *min_element(integrals.begin(), integrals.end()), *max_element(integrals.begin(), integrals.end()));
-    TH1 *h_peak_volt = new TH1D(peak_volt_histname.c_str(), h_peak_volt_title.c_str(), 10, *min_element(peak_voltages.begin(), peak_voltages.end()), *max_element(peak_voltages.begin(), peak_voltages.end()));
-    TH1 *h_peak_time = new TH1D(peak_time_histname.c_str(), h_peak_time_title.c_str(), 10, *min_element(peak_time.begin(), peak_time.end()), *max_element(peak_time.begin(), peak_time.end()));
-
-    h_fall->SetXTitle("Time(s)");
-    h_rise->SetXTitle("Time(s)");
-    h_integral->SetXTitle("Weber(Vs)");
-    h_peak_volt->SetXTitle("Voltage(V)");
-    h_peak_time->SetXTitle("Time(s)");
-
-    string errors = outputpath;
-    for (int i = 0; i < no_of_datasets; i++)
-    {
-        if (isnan(risetime[i]) || isnan(falltime[i]) || isnan(integrals[i])) // Pushback Corrupted Segments
-        {
-            errors.append("," + to_string(i + 1));
-        }
-
-        else // Fill Histograms
-        {
-            h_fall->Fill(falltime[i]);
-            h_rise->Fill(risetime[i]);
-            h_integral->Fill(integrals[i]);
-            h_peak_volt->Fill(peak_voltages[i]);
-            h_peak_time->Fill(peak_time[i]);
         }
     }
+}
 
-    // Print Results as CSV Format:
-    hist_result.push_back(h_fall->GetEntries());
-    hist_result.push_back(h_fall->GetMean());
-    hist_result.push_back(h_rise->GetMean());
-    hist_result.push_back(h_integral->GetMean());
-    hist_result.push_back(h_peak_volt->GetMean());
-    hist_result.push_back(h_peak_time->GetMean());
-    hist_result.push_back(h_fall->GetStdDev());
-    hist_result.push_back(h_rise->GetStdDev());
-    hist_result.push_back(h_integral->GetStdDev());
-    hist_result.push_back(h_peak_volt->GetStdDev());
-    hist_result.push_back(h_peak_time->GetStdDev());
+vector<double> analyser(vector<double> data, double ns)
+{
+    // Verbose Mode:
+    gErrorIgnoreLevel = kFatal;
 
-    name_split = splitter(outputname, "_"); // Split name
+    // Peak Voltage, Peak Time, Rise Time, Fall Time, Integral:
+    vector<double> result;
 
-    // Merge Histogram Data as a String:
-    string result;
-    for (int k = 0; k < int(hist_result.size()); ++k)
+    // Get Data Size:
+    int no_of_datas = data.size();
+
+    // Find Max x-axis Value:
+    double x_max = no_of_datas * ns;
+
+    // Initialize x-axis and y-axis:
+    vector<double> y_axis = data;
+    vector<double> x_axis;
+    for (size_t t = 0; t < data.size(); t++)
     {
-        result = result + hist_result[k] + ",";
-    }
-    result.append(date);
-    for (int k = 0; k < int(name_split.size()); ++k)
-    {
-        result.append("," + name_split[k]);
+        x_axis.push_back(t * ns);
     }
 
-    // Write Histograms and Error Plots as a Root File:
-    rootfile->Write();
+    // Sum y-axis to Check the Peak Position:
+    double summation = summation_vec(y_axis, 0);
 
-    // Print Histogram Results as Txt File:
-    string output_txt = outputpath + "/result.txt";
-    ofstream Out_txt(output_txt.c_str());
+    // Initialize Graph and Fit Function:
+    TGraph *graph = new TGraph(no_of_datas, &x_axis[0], &y_axis[0]);
+    TF1 *fitFcn = new TF1("fitFcn", "[0]*TMath::Landau(x,[1],[2])", 0, x_max);
 
-    Out_txt << "Fall-Integral,Peaks(V),Time(s),RiseTime(s),FallTime(s)";
-    for (int i = 0; i < no_of_datasets; i++)
+    // Peak at Positive:
+    if (summation > 0)
     {
-        Out_txt << "\n"
-                << integrals[i] << "," << peak_voltages[i] << "," << peak_time[i] << "," << risetime[i] << "," << falltime[i];
+        // Find Peak Voltage:
+        auto it = max_element(y_axis.begin(), y_axis.end());
+        result.push_back(*it); // Find the peak y value
+        int max_index = distance(y_axis.begin(), it);
+        result.push_back(x_axis[max_index]);
+
+        // Landau Fit:
+        float max_value = *it;
+        float scale = max_value;
+        float mu = max_index * ns; // Location Parameter
+        float sigma = 1 * ns;      // Scale Parameter of Fit
+        fitFcn->SetParameters(scale, mu, sigma);
+        fitFcn->SetRange(0, x_max);
+        graph->Fit("fitFcn", "wRQ");
+
+        // Calculate Rise-Fall Time:
+        double max_value_fit = fitFcn->GetMaximum();
+        double max_time_fit = fitFcn->GetParameter(1);
+        double rise_low = fitFcn->GetX(max_value_fit * 0.2, 0, max_time_fit);
+        double rise_high = fitFcn->GetX(max_value_fit * 0.8, 0, max_time_fit);
+        double fall_high = fitFcn->GetX(max_value_fit * 0.8, max_time_fit, x_max);
+        double fall_low = fitFcn->GetX(max_value_fit * 0.2, max_time_fit, x_max);
+        result.push_back(rise_high - rise_low); // Rise Time
+        result.push_back(fall_low - fall_high); // Fall Time
+
+        // Calculate Integral:
+        result.push_back(fitFcn->Integral(fall_high, x_max));
     }
-    Out_txt.close();
+
+    else
+    {
+        // Find Peak Voltage:
+        auto it = min_element(y_axis.begin(), y_axis.end());
+        result.push_back(*it);
+        int min_index = distance(y_axis.begin(), it);
+        result.push_back(x_axis[min_index]);
+
+        // Landau Fit:
+        float min_value = *it;
+        float scale = min_value;
+        float mu = min_index * ns; // Location Parameter
+        float sigma = 1 * ns;      // Scale Parameter of Fit
+        fitFcn->SetParameters(scale, mu, sigma);
+        fitFcn->SetRange(0, x_max);
+        graph->Fit("fitFcn", "wRQ");
+
+        // Calculate Rise-Fall Time:
+        double min_value_fit = fitFcn->GetMinimum();
+        double min_time_fit = fitFcn->GetParameter(1);
+        double rise_low = fitFcn->GetX(min_value_fit * 0.2, 0, min_time_fit);
+        double rise_high = fitFcn->GetX(min_value_fit * 0.8, 0, min_time_fit);
+        double fall_high = fitFcn->GetX(min_value_fit * 0.8, min_time_fit, x_max);
+        double fall_low = fitFcn->GetX(min_value_fit * 0.2, min_time_fit, x_max);
+        result.push_back(rise_high - rise_low); // Rise Time
+        result.push_back(fall_low - fall_high); // Fall Time
+
+        // Calculate Integral:
+        result.push_back(fitFcn->Integral(fall_high, x_max)); // double epsrel = 1.0e-20
+    }
 
     // Free Memory:
-    delete h_fall;
-    delete h_rise;
-    delete h_integral;
-    delete h_peak_volt;
-    delete h_peak_time;
-    rootfile->Close();
-    fp.close();
+    delete graph;
+    delete fitFcn;
+    return result;
+}
 
-    // Pushback Results and Errors
-    results_and_errors.push_back(result);
-    results_and_errors.push_back(errors);
-    cout << GREEN << "Output is saved to the directory: " << RESET << outputpath << endl;
-    return results_and_errors;
+void analyser_root()
+{
+    cout << BOLDORANGE << "______________________ROOT ANALYSER______________________" << RESET << endl;
+    std::string data_path;
+    vector<std::string> found_names;
+
+    // Ask Data Folder:
+    while (true)
+    {
+        cout << YELLOW << "Data Folder Path (For Default press ENTER)\n>" << RESET;
+        getline(cin, data_path);
+
+        if (data_path == "")
+        {
+            data_path = root_path_h;
+        }
+
+        if (std::filesystem::exists(data_path))
+        {
+            for (size_t i = 0; i < extensions_h.size(); i++)
+            {
+                found_names = file_selector(data_path, ".root");
+            }
+
+            cout << GREEN << "  FOUND " << found_names.size() << " FILES." << RESET << endl;
+            break;
+        }
+
+        else
+        {
+            cout << RED << "ERROR: FILE DOES NOT EXIST!" << RESET << endl;
+        }
+    }
+
+    // Create Directories:
+    string outputname = splitter(data_path, "/").back();
+    fs::create_directories(output_hist_path_h);
+    string output_hist = output_hist_path_h + outputname + "_hist_result.csv";
+
+    // Get Number of Files:
+    int found_names_size = found_names.size();
+
+    // Initialize ofstream:
+    std::ofstream out(output_hist.c_str());
+    out << "PeakVoltage,PeakTime,RiseTime,FallTime,Integral," + default_data_format_h + ",Segment"
+                                                                                        "\n";
+    // Loop All Files:
+    for (int file_num = 0; file_num < found_names_size; file_num++)
+    {
+        cout << GREEN << "ANALYSING: " << file_num + 1 << "/" << found_names_size << RESET << "|" << found_names[file_num] << endl;
+
+        // Open Root File:
+        TFile f(found_names[file_num].c_str());
+        TTree *tree = f.Get<TTree>("tree");
+        int n = tree->GetEntries();
+
+        // Loop Branches:
+        for (int i = 0; i < n; i++)
+        {
+            // Open Branch:
+            string segment = "seg" + to_string(i + 1);
+            TBranch *branch = tree->GetBranch(segment.c_str());
+            double signal;
+            branch->SetAddress(&signal);
+
+            // Initialize Vector to Hold the Data:
+            vector<double> data;
+            int no_of_datas = branch->GetEntries();
+
+            // Fill the Vector:
+            for (int i = 0; i < no_of_datas; i++)
+            {
+                branch->GetEntry(i);
+                data.push_back(signal);
+            }
+
+            // Analyse Data:
+            vector<double> result = analyser(data, 2.5e-9);
+
+            // Check nan and 0 values:
+            bool passed = true;
+            for (size_t result_i = 0; result_i < result.size(); result_i++){
+                if( isnan(result[result_i]) ||  result[result_i] == 0){
+                    passed = false;
+                }
+            }
+
+            if(passed){
+                // Write Results:
+            for (size_t result_i = 0; result_i < result.size(); result_i++)
+            {
+                out << result[result_i] << ",";
+            }
+
+            // Write File Specs:
+            FileFormalism File_Obj = file_formaliser(found_names[file_num]);
+            string date = File_Obj.date;
+            std::replace(date.begin(), date.end(), '/', '-');
+            out << date << "," << File_Obj.source << "," << File_Obj.scintillator << ","
+                << File_Obj.segment << "," << File_Obj.amp << "," << File_Obj.th << ","
+                << File_Obj.SiPM << "," << File_Obj.PMT << "," << File_Obj.MSps << ","
+                << File_Obj.sample << "," << File_Obj.trial << "," << i + 1 << "\n";
+            }
+
+            else{
+                cout << RED << "ERROR - NAN VALUE AT: " << RESET << found_names[file_num] << "Segment: " << i + 1 << endl;
+            }
+
+            
+        }
+        delete tree;
+    }
 }
 
 #endif

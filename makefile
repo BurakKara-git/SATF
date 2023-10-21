@@ -1,6 +1,6 @@
 CXX = $(shell root-config --cxx)
 FLAGS = $(shell root-config --cflags) -O2 -Wall -Wextra
-LIBS = $(shell root-config --evelibs)
+LIBS = $(shell root-config --libs)
 ARCH = x86_64
 SOURCES = ./main.cpp
 PROGRAM = satforce

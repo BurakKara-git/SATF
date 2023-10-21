@@ -94,29 +94,6 @@ vector<string> file_selector(string path, string ext)
 }
 
 /**
- * Counts the number of lines in a text file.
- *
- * This function reads the specified text file line by line and increments a
- * counter for each line read. It returns the total number of lines in the file.
- *
- * @author Burak
- * @param path The path of the text file for which to count the lines.
- * @return The total number of lines in the specified text file.
- */
-int line_counter(string path)
-{
-    unsigned int lines = 0;
-
-    std::ifstream inputfile(path);
-    std::string filename;
-    while (std::getline(inputfile, filename))
-    {
-        lines += 1;
-    }
-    return lines;
-}
-
-/**
  * Checks if a given string represents a valid number.
  *
  * This function attempts to convert the given string to a double using the
@@ -241,6 +218,7 @@ vector<string> compare_available_options(vector<vector<string>> data, int column
  */
 void hadd_creator(string hadd_path, string input_path)
 {
+
     string hadd_command = "hadd -f " + hadd_path + " `find " + input_path + " -type f -name '*.root'`";
 
     if (std::filesystem::exists(hadd_path))
@@ -270,7 +248,8 @@ void hadd_creator(string hadd_path, string input_path)
         }
     }
 
-    else{
+    else
+    {
         cout << RED << "ERROR - DIRECTORY DOES NOT EXIST: " << RESET << input_path << endl;
     }
 }
@@ -312,7 +291,7 @@ vector<int> filter_intersector(vector<int> first, vector<int> second)
  * @param thefile An input file stream containing data to be read.
  * @return A transpose matrix of double values, represented as a vector of vectors.
  */
-vector<vector<double>> reader(ifstream &thefile)
+vector<vector<double>> txt_reader(ifstream &thefile)
 {
     string line;
     vector<vector<string>> matrix;
@@ -347,17 +326,47 @@ vector<vector<double>> reader(ifstream &thefile)
             transpose[i][j] = stof(matrix[j][i]); // convert string to float values
         }
     }
-
-    cout << "\n"
-            " "
-            "# of rows      :  "
-         << n_rows << "\n"
-         << " "
-            "# of columns   :  "
-         << n_columns << "\n"
-         << endl;
-
     return transpose;
+}
+
+vector<vector<double>> h5_reader(string h5_path)
+{
+    vector<vector<double>> matrix;
+    H5::H5File hdf5File(h5_path.c_str(), H5F_ACC_RDONLY);
+
+    // Create path names
+    string current_path = filesystem::current_path();
+
+    // Get the Number of Segments:
+    H5::Group count_group = hdf5File.openGroup("/Waveforms/Channel 1");
+    hsize_t size = count_group.getNumObjs();
+    int no_of_datasets = int(size);
+
+    // Dataset Path:
+    string ds_name_head = "/Waveforms/Channel 1/Channel 1 Seg";
+    string ds_name_tail = "Data";
+
+    for (int i = 0; i < no_of_datasets; ++i)
+    {
+        // Open Dataset:
+        string datasetPath = ds_name_head + to_string(i + 1) + ds_name_tail;
+        H5::DataSet dset = hdf5File.openDataSet(datasetPath.c_str());
+
+        // Define the Memory Dataspace:
+        H5::DataSpace dspace = dset.getSpace();
+        hsize_t dims[2];
+        dspace.getSimpleExtentDims(dims, NULL);
+        hsize_t dimsm[1];
+        dimsm[0] = dims[0];
+        H5::DataSpace memspace(1, dimsm);
+
+        // Create a Vector with Same Size:
+        vector<double> y_axis;
+        y_axis.resize(dims[0]);
+        dset.read(y_axis.data(), H5::PredType::NATIVE_DOUBLE, memspace, dspace);
+        matrix.push_back(y_axis);
+    }
+    return matrix;
 }
 
 /**
@@ -395,7 +404,7 @@ vector<int> filter(vector<vector<string>> data, string filter)
 
     for (int i = 1; i < int(data.size()); ++i)
     {
-        if (data[i][filter_type_position] == filter_value && stoi(data[i][0]) >= filter_size_h)
+        if (data[i][filter_type_position] == filter_value)
         {
             positions.push_back(i);
         }
@@ -474,4 +483,101 @@ void combination(const vector<vector<string>> &vectors, size_t index, string str
     }
 }
 
+string getSubString(string strValue, string startChar, string endChar)
+{
+    string subString = "";
+    size_t startPos = strValue.rfind(startChar);
+    subString = strValue.substr(startPos + startChar.length());   
+    size_t endPos = subString.rfind(endChar);    
+    subString = subString.substr(0, endPos);
+    return subString;
+}
+
+class FileFormalism {
+  public:
+    string path;
+    string extension;
+    string name;
+    string date;
+    string source;
+    string scintillator;
+    string segment;
+    string amp;
+    string th;
+    string SiPM;
+    string PMT;
+    string MSps;
+    string sample;
+    string trial;
+};
+
+FileFormalism file_formaliser(string filepath)
+{
+    FileFormalism Object;
+
+    Object.path = filepath;
+    Object.extension = splitter(filepath, ".").back();
+    Object.name = getSubString(filepath, "/", ".");
+    Object.date = getSubString(filepath, "root/", "/");
+
+    vector<string> file_specs = splitter(Object.name, "_");
+    Object.source = file_specs[0];
+
+    int is_no_source = Object.source.find("NoSource");
+    if(is_no_source != -1){
+        Object.source = "NoSource";
+    }
+
+    Object.scintillator = file_specs[1];
+
+    vector<string> check_list = { "Seg", "Amp", "Th", "SiPM", "PMT", "MSps", "Sample"};
+
+    for (size_t i = 2; i < file_specs.size() - 1; i++)
+    {
+        for (size_t j = 0; j < check_list.size(); j++)
+        {
+            int pos = file_specs[i].find(check_list[j]);
+
+            if (pos != -1)
+            {
+                if (j == 0){
+                    Object.segment = file_specs[i];
+                }
+
+                else if (j == 1)
+                {
+                    Object.amp = file_specs[i];
+                }
+
+                else if (j == 2)
+                {
+                    Object.th = file_specs[i];
+                }
+
+                else if (j == 3)
+                {
+                    Object.SiPM = file_specs[i];
+                }
+
+                else if (j == 4)
+                {
+                    Object.PMT = file_specs[i];
+                }
+
+                else if (j == 5)
+                {
+                    Object.MSps = file_specs[i];
+                }
+
+                else if (j == 6){
+                    Object.sample = file_specs[i];
+                }                
+            }
+        }
+    }
+
+    Object.trial = file_specs.back();
+
+    return Object;
+}
 #endif
