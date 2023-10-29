@@ -281,7 +281,9 @@ void standard_compare(string hist_path, string operation)
         if (positions.size() == 0)
         {
             string error_msg = concatenate_vec("", type_filters, "", "", ",");
+            if(print_errors_h){
             cout << RED << "ERROR - NO COMBINATIONS FOR: " << RESET << error_msg << endl;
+            }
             continue;
         }
 
@@ -532,13 +534,12 @@ void reader()
                 writer(File_Obj, output);
             }
 
-                cout << GREEN << "FILE SAVED TO: " << RESET << root_name << endl;
-
+            cout << GREEN << "FILE SAVED TO: " << RESET << root_name << endl;
         }
     }
 }
 
-vector<double> analyser(vector<double> data, double ns)
+vector<double> analyser(vector<double> data, double ns, int segment, TF1 *fitFcn, TGraph *graph, FileFormalism File_obj)
 {
     // Verbose Mode:
     gErrorIgnoreLevel = kFatal;
@@ -552,28 +553,27 @@ vector<double> analyser(vector<double> data, double ns)
     // Find Max x-axis Value:
     double x_max = no_of_datas * ns;
 
-    // Initialize x-axis and y-axis:
-    vector<double> y_axis = data;
+    // Initialize x-axis and Fill Graph:
     vector<double> x_axis;
     for (size_t t = 0; t < data.size(); t++)
     {
         x_axis.push_back(t * ns);
+        graph->SetPoint(t, t * ns, data[t]);
     }
 
     // Sum y-axis to Check the Peak Position:
-    double summation = summation_vec(y_axis, 0);
+    double summation = summation_vec(data, 0);
 
     // Initialize Graph and Fit Function:
-    TGraph *graph = new TGraph(no_of_datas, &x_axis[0], &y_axis[0]);
-    TF1 *fitFcn = new TF1("fitFcn", "[0]*TMath::Landau(x,[1],[2])", 0, x_max);
+    fitFcn->SetRange(0, x_max);
 
     // Peak at Positive:
     if (summation > 0)
     {
         // Find Peak Voltage:
-        auto it = max_element(y_axis.begin(), y_axis.end());
+        auto it = max_element(data.begin(), data.end());
         result.push_back(*it); // Find the peak y value
-        int max_index = distance(y_axis.begin(), it);
+        int max_index = distance(data.begin(), it);
         result.push_back(x_axis[max_index]);
 
         // Landau Fit:
@@ -602,9 +602,9 @@ vector<double> analyser(vector<double> data, double ns)
     else
     {
         // Find Peak Voltage:
-        auto it = min_element(y_axis.begin(), y_axis.end());
+        auto it = min_element(data.begin(), data.end());
         result.push_back(*it);
-        int min_index = distance(y_axis.begin(), it);
+        int min_index = distance(data.begin(), it);
         result.push_back(x_axis[min_index]);
 
         // Landau Fit:
@@ -630,9 +630,32 @@ vector<double> analyser(vector<double> data, double ns)
         result.push_back(fitFcn->Integral(fall_high, x_max)); // double epsrel = 1.0e-20
     }
 
-    // Free Memory:
-    delete graph;
-    delete fitFcn;
+    if (print_results_h)
+    {
+        // Graph Design
+        TCanvas *c1 = new TCanvas("c1", "c1", 200, 10, 600, 400);
+        c1->SetGrid();
+        c1->Draw();
+        string error_title = string(File_obj.path) + " - Voltage vs. Time Segment: ";
+        graph->SetTitle(error_title.c_str());
+        graph->GetXaxis()->SetTitle("Time (s)");
+        graph->GetYaxis()->SetTitle("Voltage (V)");
+        graph->SetMarkerStyle(8);
+        graph->SetMarkerColor(kBlue);
+        graph->SetMarkerSize(0.7);
+        graph->SetLineColor(kBlue);
+        graph->SetLineWidth(3);
+        graph->Draw("A*");
+        gStyle->SetOptFit(1);
+
+        // Save Graph as Root and PDF File:
+        string pdf_path = output_hist_path_h + "/plots/";
+        fs::create_directories(pdf_path.c_str());
+        string output_pdf = pdf_path + "/graph_" + File_obj.name + "_seg" + to_string(segment + 1) + ".pdf";
+        c1->SaveAs(output_pdf.c_str());
+        delete c1;
+    }
+
     return result;
 }
 
@@ -641,7 +664,8 @@ void analyser_root()
     cout << BOLDORANGE << "______________________ROOT ANALYSER______________________" << RESET << endl;
     std::string data_path;
     vector<std::string> found_names;
-
+    TF1 *fitFcn = new TF1("fitFcn", "[0]*TMath::Landau(x,[1],[2])");
+    TGraph *graph = new TGraph();
     // Ask Data Folder:
     while (true)
     {
@@ -673,19 +697,26 @@ void analyser_root()
     // Create Directories:
     string outputname = splitter(data_path, "/").back();
     fs::create_directories(output_hist_path_h);
-    string output_hist = output_hist_path_h + outputname + "_hist_result.csv";
+    string output_hist = output_hist_path_h + outputname + "_results.csv";
+    string errors = output_hist_path_h + outputname + "_errors.csv";
 
     // Get Number of Files:
     int found_names_size = found_names.size();
 
     // Initialize ofstream:
     std::ofstream out(output_hist.c_str());
-    out << "PeakVoltage,PeakTime,RiseTime,FallTime,Integral," + default_data_format_h + ",Segment"
+    out << "PeakVoltage,PeakTime,RiseTime,FallTime,Integral," + default_data_format_h + ",SegNo"
                                                                                         "\n";
+
+    std::ofstream error(errors.c_str());
+    error << "PeakVoltage,PeakTime,RiseTime,FallTime,Integral," + default_data_format_h + ",SegNo"
+                                                                                          "\n";
     // Loop All Files:
     for (int file_num = 0; file_num < found_names_size; file_num++)
     {
         cout << GREEN << "ANALYSING: " << file_num + 1 << "/" << found_names_size << RESET << "|" << found_names[file_num] << endl;
+
+        FileFormalism File_Obj = file_formaliser(found_names[file_num]);
 
         // Open Root File:
         TFile f(found_names[file_num].c_str());
@@ -713,41 +744,70 @@ void analyser_root()
             }
 
             // Analyse Data:
-            vector<double> result = analyser(data, 2.5e-9);
+            vector<double> result = analyser(data, 2.5e-9, i, fitFcn, graph, File_Obj);
 
             // Check nan and 0 values:
             bool passed = true;
-            for (size_t result_i = 0; result_i < result.size(); result_i++){
-                if( isnan(result[result_i]) ||  result[result_i] == 0){
+            for (size_t result_i = 0; result_i < result.size(); result_i++)
+            {
+                if (isnan(result[result_i]) || result[result_i] == 0)
+                {
                     passed = false;
+                    if(print_errors_h){
+                        cout << RED << "ERROR - NAN VALUE AT: " << RESET << found_names[file_num] << "Segment: " << i + 1 << endl;
+                    }
+                    
+                    break;
                 }
             }
 
-            if(passed){
-                // Write Results:
-            for (size_t result_i = 0; result_i < result.size(); result_i++)
+            if (result[2] <= 0 || result[3] <= 0)
             {
-                out << result[result_i] << ",";
+                passed = false;
+                if(print_errors_h){
+                cout << RED << "ERROR - NEGATIVE TIME: " << RESET << found_names[file_num] << "Segment: " << i + 1 << endl;
+                }
             }
 
-            // Write File Specs:
-            FileFormalism File_Obj = file_formaliser(found_names[file_num]);
-            string date = File_Obj.date;
-            std::replace(date.begin(), date.end(), '/', '-');
-            out << date << "," << File_Obj.source << "," << File_Obj.scintillator << ","
-                << File_Obj.segment << "," << File_Obj.amp << "," << File_Obj.th << ","
-                << File_Obj.SiPM << "," << File_Obj.PMT << "," << File_Obj.MSps << ","
-                << File_Obj.sample << "," << File_Obj.trial << "," << i + 1 << "\n";
+            if (passed)
+            {
+                // Write Results:
+                for (size_t result_i = 0; result_i < result.size(); result_i++)
+                {
+                    out << result[result_i] << ",";
+                }
+
+                // Write File Specs:
+                string date = File_Obj.date;
+                std::replace(date.begin(), date.end(), '/', '-');
+                out << date << "," << File_Obj.source << "," << File_Obj.scintillator << ","
+                    << File_Obj.segment << "," << File_Obj.amp << "," << File_Obj.th << ","
+                    << File_Obj.SiPM << "," << File_Obj.PMT << "," << File_Obj.MSps << ","
+                    << File_Obj.sample << "," << File_Obj.trial << "," << i + 1 << "\n";
             }
 
-            else{
-                cout << RED << "ERROR - NAN VALUE AT: " << RESET << found_names[file_num] << "Segment: " << i + 1 << endl;
-            }
+            else
+            {
+                // Write Errors:
+                for (size_t result_i = 0; result_i < result.size(); result_i++)
+                {
+                    error << result[result_i] << ",";
+                }
 
-            
+                // Write File Specs:
+                string date = File_Obj.date;
+                std::replace(date.begin(), date.end(), '/', '-');
+                error << date << "," << File_Obj.source << "," << File_Obj.scintillator << ","
+                      << File_Obj.segment << "," << File_Obj.amp << "," << File_Obj.th << ","
+                      << File_Obj.SiPM << "," << File_Obj.PMT << "," << File_Obj.MSps << ","
+                      << File_Obj.sample << "," << File_Obj.trial << "," << i + 1 << "\n";
+            }
         }
         delete tree;
     }
+    // Free Memory
+    delete fitFcn;
+    delete graph;
 }
 
 #endif

@@ -69,10 +69,12 @@
 #ifndef consth
 #define consth
 
-const std::string hist_path_h = std::string(std::filesystem::current_path()) + "/outputs/results/root_hist_result.csv"; // Location of Default Histogram
-const std::string output_hist_path_h = std::string(std::filesystem::current_path()) + "/outputs/results/";              // Location of Histogram Results
+const bool print_results_h = false;                                                                                  // Print Fit and Graph as a PDF File
+const bool print_errors_h = true;                                                                                   // Print Errors to the Terminal
+const std::string hist_path_h = std::string(std::filesystem::current_path()) + "/outputs/results/root_results.csv"; // Location of Default Histogram
+const std::string output_hist_path_h = std::string(std::filesystem::current_path()) + "/outputs/results/";          // Location of Histogram Results
 const std::string data_path_h = std::string(std::filesystem::current_path()) + "/data/";
-const std::string root_path_h = std::string(std::filesystem::current_path()) + "/outputs/root/"; // Location of Data    
+const std::string root_path_h = std::string(std::filesystem::current_path()) + "/outputs/root/"; // Location of Data
 const std::string default_data_format_h = "Date,Source,Scintillator,Segment,Amp,Threshold,SiPM,PMT,MSps,Sample,Trial";
 const std::string browser_h = "root -l --web=server:8899 $ROOTSYS/tutorials/v7/browser.cxx";                // Browser Command
 const std::string compare_root_path_h = std::string(std::filesystem::current_path()) + "/outputs/compare/"; // Location of Compare Results (functions - custom_compare, standard_compare)

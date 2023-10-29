@@ -7,7 +7,7 @@ int main()
     interface(); // Load Interface Logo
     std::string option;
 
-    cout << YELLOW << "Type 'read', 'analyse', 'compare', 'hadd', 'browser' or Press ENTER\n>" << RESET;
+    cout << YELLOW << "Type 'read', 'analyse', 'compare', 'hadd', 'browser'. Press ENTER to exit\n>" << RESET;
     getline(cin, option);
 
     if (option == "compare" || option == "c") // Compare an existing histogram result file
