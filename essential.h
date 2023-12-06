@@ -55,7 +55,7 @@
 #include "TFrame.h"
 #include "TSystem.h"
 #include "TStyle.h"
-
+#include "TLegend.h"
 #endif
 
 #ifndef h5header
@@ -69,10 +69,11 @@
 #ifndef consth
 #define consth
 
-const bool print_results_h = false;                                                                                  // Print Fit and Graph as a PDF File
+const bool print_results_h = true;                                                                                 // Print Fit and Graph as a PDF File
 const bool print_errors_h = true;                                                                                   // Print Errors to the Terminal
 const std::string hist_path_h = std::string(std::filesystem::current_path()) + "/outputs/results/root_results.csv"; // Location of Default Histogram
 const std::string output_hist_path_h = std::string(std::filesystem::current_path()) + "/outputs/results/";          // Location of Histogram Results
+const std::string output_plot_path_h = std::string(std::filesystem::current_path()) + "/outputs/plots/";          // Location of Plots
 const std::string data_path_h = std::string(std::filesystem::current_path()) + "/data/";
 const std::string root_path_h = std::string(std::filesystem::current_path()) + "/outputs/root/"; // Location of Data
 const std::string default_data_format_h = "Date,Source,Scintillator,Segment,Amp,Threshold,SiPM,PMT,MSps,Sample,Trial";

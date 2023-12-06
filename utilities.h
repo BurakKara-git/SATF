@@ -487,14 +487,15 @@ string getSubString(string strValue, string startChar, string endChar)
 {
     string subString = "";
     size_t startPos = strValue.rfind(startChar);
-    subString = strValue.substr(startPos + startChar.length());   
-    size_t endPos = subString.rfind(endChar);    
+    subString = strValue.substr(startPos + startChar.length());
+    size_t endPos = subString.rfind(endChar);
     subString = subString.substr(0, endPos);
     return subString;
 }
 
-class FileFormalism {
-  public:
+class FileFormalism
+{
+public:
     string path;
     string extension;
     string name;
@@ -518,19 +519,28 @@ FileFormalism file_formaliser(string filepath)
     Object.path = filepath;
     Object.extension = splitter(filepath, ".").back();
     Object.name = getSubString(filepath, "/", ".");
-    Object.date = getSubString(filepath, "root/", "/");
+    
+    int is_output = filepath.find("outputs");
+    if(is_output  == -1){
+        Object.date = getSubString(filepath, "data/", "/");
+    }
+    else{
+        Object.date = getSubString(filepath, "root/", "/");
+    }
+    
 
     vector<string> file_specs = splitter(Object.name, "_");
     Object.source = file_specs[0];
 
     int is_no_source = Object.source.find("NoSource");
-    if(is_no_source != -1){
+    if (is_no_source != -1)
+    {
         Object.source = "NoSource";
     }
 
     Object.scintillator = file_specs[1];
 
-    vector<string> check_list = { "Seg", "Amp", "Th", "SiPM", "PMT", "MSps", "Sample"};
+    vector<string> check_list = {"Seg", "Amp", "Th", "SiPM", "PMT", "MSps", "Sample"};
 
     for (size_t i = 2; i < file_specs.size() - 1; i++)
     {
@@ -540,7 +550,8 @@ FileFormalism file_formaliser(string filepath)
 
             if (pos != -1)
             {
-                if (j == 0){
+                if (j == 0)
+                {
                     Object.segment = file_specs[i];
                 }
 
@@ -569,9 +580,10 @@ FileFormalism file_formaliser(string filepath)
                     Object.MSps = file_specs[i];
                 }
 
-                else if (j == 6){
+                else if (j == 6)
+                {
                     Object.sample = file_specs[i];
-                }                
+                }
             }
         }
     }
