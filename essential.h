@@ -56,6 +56,8 @@
 #include "TSystem.h"
 #include "TStyle.h"
 #include "TLegend.h"
+#include "TGraphErrors.h"
+#include "TLine.h"
 #endif
 
 #ifndef h5header
@@ -69,16 +71,19 @@
 #ifndef consth
 #define consth
 
-const bool print_results_h = true;                                                                                 // Print Fit and Graph as a PDF File
+const bool print_results_h = false;                                                                                  // Print Fit and Graph as a PDF File
 const bool print_errors_h = true;                                                                                   // Print Errors to the Terminal
 const std::string hist_path_h = std::string(std::filesystem::current_path()) + "/outputs/results/root_results.csv"; // Location of Default Histogram
 const std::string output_hist_path_h = std::string(std::filesystem::current_path()) + "/outputs/results/";          // Location of Histogram Results
-const std::string output_plot_path_h = std::string(std::filesystem::current_path()) + "/outputs/plots/";          // Location of Plots
+const std::string output_plot_path_h = std::string(std::filesystem::current_path()) + "/outputs/plots/";            // Location of Plots
 const std::string data_path_h = std::string(std::filesystem::current_path()) + "/data/";
 const std::string root_path_h = std::string(std::filesystem::current_path()) + "/outputs/root/"; // Location of Data
 const std::string default_data_format_h = "Date,Source,Scintillator,Segment,Amp,Threshold,SiPM,PMT,MSps,Sample,Trial";
 const std::string browser_h = "root -l --web=server:8899 $ROOTSYS/tutorials/v7/browser.cxx";                // Browser Command
 const std::string compare_root_path_h = std::string(std::filesystem::current_path()) + "/outputs/compare/"; // Location of Compare Results (functions - custom_compare, standard_compare)
+const std::string fit_function1_h = "[0]*exp(-0.5*((x-[1])/[2])^2)*exp(-x/[3])";                   // Fit Function_1
+const std::string fit_function2_h = "[0]*TMath::Landau(x,[1],[2])";
+const std::string fit_function3_h = "[0]*exp(-0.5*((x-[1])/[2]))*exp(-0.5*exp(-((x-[1])/[2])))";
 const std::vector<std::string> extensions_h = {
     ".txt",
     ".h5",

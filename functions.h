@@ -43,22 +43,49 @@ vector<vector<string>> hist_reader(ifstream &thefile)
  * @param hist_name
  * @return TCanvas*
  */
-TCanvas *hist_label(vector<string> names, vector<double> values, string hist_name)
+TCanvas *hist_label(vector<string> names, vector<double> values, vector<double> values_stds, string hist_name)
 {
+    // Initialize:
     int nx = values.size();
     TCanvas *c1 = new TCanvas("c1", "c1", 10, 10, 900, 500);
+    TH1D *h = new TH1D(hist_name.c_str(), hist_name.c_str(), nx, 0, nx);
+
     c1->SetGrid();
     c1->SetBottomMargin(0.2);
-    TH1D *h = new TH1D(hist_name.c_str(), hist_name.c_str(), nx, 0, nx);
     h->SetStats(0);
     h->SetFillColor(30);
+    h->SetMinimum(0);
+
+    // Fill Histogram:
     for (int i = 0; i < nx; i++)
     {
         vector<string> new_name_vec = splitter(names[i], "_");
         string new_name = concatenate_vec("", new_name_vec, "", "", " ");
         h->Fill(new_name.c_str(), values[i]);
     }
+
+    // Draw Histogram:
     h->Draw("HIST");
+
+    // Draw Standard Deviation Lines:
+    for (int i = 0; i < nx; i++)
+    {
+        vector<vector<double>> drawSet = {
+            {i + 0.5, i + 0.5, values[i] - values_stds[i], values[i] + values_stds[i]},    // Vertical
+            {i + 0.25, i + 0.75, values[i] - values_stds[i], values[i] - values_stds[i]},  // Low Horizontal
+            {i + 0.25, i + 0.75, values[i] + values_stds[i], values[i] + values_stds[i]}}; // High Horizontal
+
+        for (size_t j = 0; j < drawSet.size(); j++)
+        {
+            TLine *std_line = new TLine();
+            std_line->SetX1(drawSet[j][0]);
+            std_line->SetX2(drawSet[j][1]);
+            std_line->SetY1(drawSet[j][2]);
+            std_line->SetY2(drawSet[j][3]);
+            std_line->Draw("SAME");
+        }
+    }
+
     return c1;
 }
 
@@ -373,8 +400,7 @@ void standard_compare(string hist_path, string operation)
     {
         string pdf_name = hist_result_path + pdf_names[i] + ".pdf";
         string pdf_name_std = hist_result_path + pdf_names[i] + "_std.pdf";
-        hist_label(name_groups[i], value_groups[i], pdf_names[i])->Print(pdf_name.c_str());
-        hist_label(name_groups[i], value_groups_std[i], pdf_names[i] + "_std")->Print(pdf_name_std.c_str());
+        hist_label(name_groups[i], value_groups[i], value_groups_std[i], pdf_names[i])->Print(pdf_name.c_str());
         string current_path = fs::current_path();
         cout << GREEN << "COMPARE RESULT (PDF) SAVED TO THE DIRECTORY: " << RESET << pdf_name << endl;
     }
@@ -539,18 +565,7 @@ void reader()
     }
 }
 
-int findPos(vector<double> vec, double val)
-{
-    int Pos = 0;
-    auto it = find(vec.begin(), vec.end(), val);
-    if (it != vec.end())
-    {
-        Pos = it - vec.begin();
-    }
-    return Pos;
-}
-
-vector<double> analyser(vector<double> data, double ns, int segment, TF1 *fitFcn, TGraph *graph, FileFormalism File_obj)
+vector<double> analyser(vector<double> data, double ns, int segment, vector<TF1*> fitFcns, TGraph *graph, FileFormalism File_obj)
 {
     // Verbose Mode:
     gErrorIgnoreLevel = kFatal;
@@ -562,7 +577,7 @@ vector<double> analyser(vector<double> data, double ns, int segment, TF1 *fitFcn
     int no_of_datas = data.size();
 
     // Find Max x-axis Value:
-    double x_max = no_of_datas * ns;
+    // double x_max = no_of_datas * ns;
 
     // Initialize x-axis and Fill Graph:
     vector<double> x_axis;
@@ -570,17 +585,20 @@ vector<double> analyser(vector<double> data, double ns, int segment, TF1 *fitFcn
     {
         x_axis.push_back(t * ns);
         graph->SetPoint(t, t * ns, data[t]);
+        // graph->SetPointError(t, ns/2, 0.05);
     }
 
     // Sum y-axis to Check the Peak Position:
     double summation = summation_vec(data, 0);
+    double x_max = no_of_datas * ns;
 
     // Initialize Graph and Fit Function:
-    auto fitFcn2 = new TF1("fitFcn2", "[0]*TMath::Exp((-1)*([2]*(x-[1])+TMath::Exp((-1)*([2]*(x-[1]))))/2)");
-    auto fitFcn1 = new TF1("fitFcn1", "[0]*TMath::Landau(x,[1],[2])");
-    fitFcn2->SetLineColor(kRed);
-    fitFcn1->SetLineColor(kBlue);
-    fitFcn->SetLineColor(kGreen);
+    TF1 *fitFcn1 = fitFcns[0];
+    TF1 *fitFcn2 = fitFcns[1];
+    TF1 *fitFcn3 = fitFcns[2];
+    fitFcn1 ->SetLineColor(kRed);
+    fitFcn2 ->SetLineColor(kBlue);
+    fitFcn3 ->SetLineColor(kGreen);
 
     // Peak at Positive:
     if (summation > 0)
@@ -592,43 +610,37 @@ vector<double> analyser(vector<double> data, double ns, int segment, TF1 *fitFcn
         result.push_back(x_axis[max_index]);
 
         // Set Fit Range
-        double x_range_min = findPos(data, data[max_index - 10]) * ns;
-        double x_range_max = findPos(data, data[max_index + 10]) * ns;
-        fitFcn->SetRange(x_range_min, x_range_max);
-        fitFcn1->SetRange(x_range_min, x_range_max);
-        fitFcn2->SetRange(x_range_min, x_range_max);
+        double x_range_min = findPos(data, data[max_index - 20], 0, max_index) * ns;
+        double x_range_max = findPos(data, data[max_index + 20], max_index, no_of_datas) * ns;
+        fitFcn1->SetRange(0, x_max);
+        fitFcn2->SetRange(0, x_max);
+        fitFcn3->SetRange(0, x_max);        
 
-        // Landau Fit:
+        // Fit:
         float max_value = *it;
         float scale = max_value;   // y-Scale Parameter
         float mu = max_index * ns; // Location Parameter
         float sigma = 1 * ns;      // x-Scale Parameter
 
-        fitFcn->SetParameters(scale, mu, sigma);
-        graph->Fit("fitFcn", "wRQ");
-
-        fitFcn1->SetParLimits(0, 0, 2 * scale);
-        fitFcn1->SetParLimits(1, 0, 2 * mu);
-        fitFcn1->SetParLimits(2, 0, 2 * ns);
-        graph->Fit("fitFcn1", "wR+Q");
-
-        fitFcn2->SetParLimits(0, 0, 2 * scale);
-        fitFcn2->SetParLimits(1, 0, 2 * mu);
-        fitFcn2->SetParLimits(2, 0, 2 * (1 / ns));
-        graph->Fit("fitFcn2", "wR+Q");
+        fitFcn1->SetParameters(scale, mu, sigma, abs(scale));
+        fitFcn2->SetParameters(scale, mu, sigma);
+        fitFcn3->SetParameters(scale, mu, sigma);      
+        graph->Fit("fitFcn1", "wRQ");
+        //graph->Fit("fitFcn2", "wR+Q");
+        //graph->Fit("fitFcn3", "wR+Q");        
 
         // Calculate Rise-Fall Time:
-        double max_value_fit = fitFcn->GetMaximum();
-        double max_time_fit = fitFcn->GetMaximumX(x_range_min,x_range_max);
-        double rise_low = fitFcn->GetX(max_value_fit * 0.2, x_range_min, max_time_fit);
-        double rise_high = fitFcn->GetX(max_value_fit * 0.8, x_range_min, max_time_fit);
-        double fall_high = fitFcn->GetX(max_value_fit * 0.8, max_time_fit, x_range_max);
-        double fall_low = fitFcn->GetX(max_value_fit * 0.2, max_time_fit, x_range_max);
+        double max_value_fit = fitFcn1->GetMaximum();
+        double max_time_fit = fitFcn1->GetMaximumX(x_range_min, x_range_max);
+        double rise_low = fitFcn1->GetX(max_value_fit * 0.2, x_range_min, max_time_fit);
+        double rise_high = fitFcn1->GetX(max_value_fit * 0.8, x_range_min, max_time_fit);
+        double fall_high = fitFcn1->GetX(max_value_fit * 0.8, max_time_fit, x_range_max);
+        double fall_low = fitFcn1->GetX(max_value_fit * 0.2, max_time_fit, x_range_max);
         result.push_back(rise_high - rise_low); // Rise Time
         result.push_back(fall_low - fall_high); // Fall Time
 
         // Calculate Integral:
-        result.push_back(fitFcn->Integral(fall_high, x_range_max));
+        result.push_back(fitFcn1->Integral(fall_high, x_max));
     }
 
     else
@@ -640,11 +652,11 @@ vector<double> analyser(vector<double> data, double ns, int segment, TF1 *fitFcn
         result.push_back(x_axis[min_index]);
 
         // Set Fit Range
-        double x_range_min = findPos(data, data[min_index - 10]) * ns;
-        double x_range_max = findPos(data, data[min_index + 10]) * ns;
-        fitFcn->SetRange(x_range_min, x_range_max);
-        fitFcn1->SetRange(x_range_min, x_range_max);
-        fitFcn2->SetRange(x_range_min, x_range_max);
+        double x_range_min = findPos(data, data[min_index - 20], 0, min_index) * ns;
+        double x_range_max = findPos(data, data[min_index + 20], min_index, no_of_datas) * ns;
+        fitFcn1->SetRange(0, x_max);
+        fitFcn2->SetRange(0, x_max);
+        fitFcn3->SetRange(0, x_max);
 
         // Landau Fit:
         float min_value = *it;
@@ -652,31 +664,26 @@ vector<double> analyser(vector<double> data, double ns, int segment, TF1 *fitFcn
         float mu = min_index * ns; // Location Parameter
         float sigma = 1 * ns;      // x-Scale Parameter
 
-        fitFcn->SetParameters(scale, mu, sigma);
-        graph->Fit("fitFcn", "wRQ");
-
-        fitFcn1->SetParLimits(0, scale, 0);
-        fitFcn1->SetParLimits(1, 0, mu);
-        fitFcn1->SetParLimits(2, 0, ns);
-        graph->Fit("fitFcn1", "wR+Q");
-
-        fitFcn2->SetParLimits(0, 2 * scale, 0);
-        fitFcn2->SetParLimits(1, 0, 2 * mu);
-        fitFcn2->SetParLimits(2, 0, 2 * (1 / ns));
-        graph->Fit("fitFcn2", "wR+Q");
+        fitFcn1->SetParameters(scale, mu, sigma, abs(scale));
+        fitFcn2->SetParameters(scale, mu, sigma);
+        fitFcn3->SetParameters(scale, mu, sigma);
+        graph->Fit("fitFcn1", "wRQ");
+        //graph->Fit("fitFcn2", "wR+Q");
+        //graph->Fit("fitFcn3", "wR+Q");
 
         // Calculate Rise-Fall Time:
-        double min_value_fit = fitFcn->GetMinimum();
-        double min_time_fit = fitFcn->GetMinimumX(x_range_min,x_range_max);
-        double rise_low = fitFcn->GetX(min_value_fit * 0.2, x_range_min, min_time_fit);
-        double rise_high = fitFcn->GetX(min_value_fit * 0.8, x_range_min, min_time_fit);
-        double fall_high = fitFcn->GetX(min_value_fit * 0.8, min_time_fit, x_range_max);
-        double fall_low = fitFcn->GetX(min_value_fit * 0.2, min_time_fit, x_range_max);
+        double min_value_fit = fitFcn1->GetMinimum(x_range_min, x_range_max);
+        double min_time_fit = fitFcn1->GetMinimumX(x_range_min, x_range_max);
+        double rise_low = fitFcn1->GetX(min_value_fit * 0.2, x_range_min, min_time_fit);
+        double rise_high = fitFcn1->GetX(min_value_fit * 0.8, x_range_min, min_time_fit);
+        double fall_high = fitFcn1->GetX(min_value_fit * 0.8, min_time_fit, x_range_max);
+        double fall_low = fitFcn1->GetX(min_value_fit * 0.2, min_time_fit, x_range_max);
         result.push_back(rise_high - rise_low); // Rise Time
         result.push_back(fall_low - fall_high); // Fall Time
 
         // Calculate Integral:
-        result.push_back(fitFcn->Integral(fall_high, x_range_max)); // double epsrel = 1.0e-20
+        double integral = fitFcn1->Integral(fall_high, x_max);
+        result.push_back(integral); // double epsrel = 1.0e-20
     }
 
     if (print_results_h)
@@ -697,9 +704,10 @@ vector<double> analyser(vector<double> data, double ns, int segment, TF1 *fitFcn
         graph->Draw("A*");
 
         auto legend = new TLegend(0.1, 0.7, 0.48, 0.9);
-        legend->AddEntry(fitFcn, "Landau Fit (With setParameters)", "L");
-        legend->AddEntry(fitFcn1, "Landau Fit (With setParLimits)", "L");
-        legend->AddEntry(fitFcn2, "Approximate Landau Fit", "L");
+        legend->AddEntry(fitFcn1, "Gaussian with Exponential Decay", "L");        
+        legend->AddEntry(fitFcn2, "Landau Function", "L");        
+        legend->AddEntry(fitFcn3, "Approximate Landau Function", "L");
+
         legend->Draw("same");
         gStyle->SetOptStat(1);
 
@@ -710,7 +718,6 @@ vector<double> analyser(vector<double> data, double ns, int segment, TF1 *fitFcn
         c1->SaveAs(output_pdf.c_str());
         delete c1;
     }
-    delete fitFcn2;
     return result;
 }
 
@@ -719,8 +726,12 @@ void analyser_root()
     cout << BOLDORANGE << "______________________ROOT ANALYSER______________________" << RESET << endl;
     std::string data_path;
     vector<std::string> found_names;
-    TF1 *fitFcn = new TF1("fitFcn", "[0]*TMath::Landau(x,[1],[2])");
+    TF1 *fitFcn1 = new TF1("fitFcn1", fit_function1_h.c_str()); // Gaussian
+    TF1 *fitFcn2 = new TF1("fitFcn2", fit_function2_h.c_str()); // Landau
+    TF1 *fitFcn3 = new TF1("fitFcn3", fit_function3_h.c_str()); // Approximate Landau
+    vector<TF1 *> fitFcns = {fitFcn1, fitFcn2, fitFcn3};    
     TGraph *graph = new TGraph();
+
     // Ask Data Folder:
     while (true)
     {
@@ -799,7 +810,7 @@ void analyser_root()
             }
 
             // Analyse Data:
-            vector<double> result = analyser(data, 2.5e-9, i, fitFcn, graph, File_Obj);
+            vector<double> result = analyser(data, 2.5e-9, i, fitFcns, graph, File_Obj);
 
             // Check nan and 0 values:
             bool passed = true;
@@ -862,9 +873,6 @@ void analyser_root()
         }
         delete tree;
     }
-    // Free Memory
-    delete fitFcn;
-    delete graph;
 }
 
 #endif

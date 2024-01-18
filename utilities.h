@@ -592,4 +592,20 @@ FileFormalism file_formaliser(string filepath)
 
     return Object;
 }
+
+template <typename T>
+int findPos(vector<T> const& vec, T val, int begin, int end)
+{
+    vector<T> slicedVector(vec.begin() + begin, vec.begin() + end + 1);
+
+    auto it = find(slicedVector.begin(), slicedVector.end(), val);
+    if (it != slicedVector.end())
+    {
+        return it - slicedVector.begin() + begin;
+    }
+    else
+    {
+        return -1;
+    }
+}
 #endif
